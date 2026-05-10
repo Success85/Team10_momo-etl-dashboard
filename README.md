@@ -85,7 +85,7 @@ momo-data-pipeline/
 
 ## Scrum Board
 
-> 🔗 [View our GitHub Projects Scrum Board](#) ← _Replace this link after board is created_
+> 🔗 [View our GitHub Projects Scrum Board](https://github.com/users/Success85/projects/2/views/1)
 
 ---
 
