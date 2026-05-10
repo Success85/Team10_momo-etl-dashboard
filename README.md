@@ -72,6 +72,8 @@ Team10_momo-etl-dashboard/
     ├── test_parse_xml.py
     ├── test_clean_normalize.py
     └── test_categorize.py
+├── docs/
+    ├── architecture.jpg              # System architecture diagram
 ```
 
 ---
