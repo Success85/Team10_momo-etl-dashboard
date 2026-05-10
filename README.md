@@ -76,7 +76,7 @@ momo-data-pipeline/
 ---
 
 ## System Architecture
-
+Found in docs/
 ![Architecture Diagram](docs/architecture.jpg)
 
 > 🔗 [View full diagram on Draw.io](https://drive.google.com/file/d/1osJvG8CJ-X3vtCAiOSXfQrCpunGgx8CZ/view?usp=sharing)
