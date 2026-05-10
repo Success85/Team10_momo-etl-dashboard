@@ -69,9 +69,9 @@ Team10_momo-etl-dashboard/
 │   ├── export_json.sh                # Rebuilds dashboard.json from DB
 │   └── serve_frontend.sh             # Serves the static frontend locally
 └── tests/
-    ├── test_parse_xml.py
-    ├── test_clean_normalize.py
-    └── test_categorize.py
+│   ├── test_parse_xml.py
+│   ├── test_clean_normalize.py
+│   └── test_categorize.py
 ├── docs/
     ├── architecture.jpg              # System architecture diagram
 ```
