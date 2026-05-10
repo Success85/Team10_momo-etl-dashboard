@@ -79,7 +79,7 @@ momo-data-pipeline/
 
 ![Architecture Diagram](docs/architecture.jpg)
 
-> 🔗 [View full diagram on Draw.io](#) ← _Replace this link after diagram is created_
+> 🔗 [View full diagram on Draw.io](https://drive.google.com/file/d/1osJvG8CJ-X3vtCAiOSXfQrCpunGgx8CZ/view?usp=sharing)
 
 ---
 
