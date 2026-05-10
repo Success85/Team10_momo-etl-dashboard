@@ -7,9 +7,10 @@ A fullstack data engineering project that processes MTN Mobile Money (MoMo) SMS 
 ---
 
 ## Team
+**Team Name:** Team10
 
-| Name | Role |
-|------|------|
+| Team Members Name | Role |
+|---------|----------|
 | Success | Database |
 | Nathael | Backend / ETL |
 | Michael | Frontend |
@@ -32,7 +33,7 @@ MTN MoMo generates SMS notifications for every transaction — incoming payments
 ## Repository Structure
 
 ```
-momo-data-pipeline/
+Team10_momo-etl-dashboard/
 ├── README.md                         # Setup, run instructions, overview
 ├── .env.example                      # Environment variable template
 ├── requirements.txt                  # Python dependencies
