@@ -247,3 +247,32 @@ JOIN transaction_participants tp ON u.user_id = tp.user_id
 JOIN transactions t              ON tp.transaction_id = t.transaction_id
 JOIN transaction_categories tc   ON t.category_id = tc.category_id
 ORDER BY t.transaction_date DESC;
+
+-- CRUD operations showing data manipulation and table modified
+-- READ 1: all transactions by date
+SELECT t.external_tx_id, tc.category_name, t.amount, t.fee, t.balance_after, t.transaction_date, t.status
+FROM transactions t
+JOIN transaction_categories tc ON t.category_id = tc.category_id
+ORDER BY t.transaction_date ASC;
+
+-- READ 2: account owner full history
+SELECT t.external_tx_id, tc.category_name, tp.role, t.amount, t.fee, t.balance_after, t.transaction_date
+FROM transaction_participants tp
+JOIN transactions t            ON tp.transaction_id = t.transaction_id
+JOIN transaction_categories tc ON t.category_id = tc.category_id
+WHERE tp.user_id = 1
+ORDER BY t.transaction_date ASC;
+
+-- READ 3: spending by category
+SELECT tc.category_name, COUNT(*) AS num_transactions, SUM(t.amount) AS total_rwf, SUM(t.fee) AS total_fees
+FROM transactions t
+JOIN transaction_categories tc ON t.category_id = tc.category_id
+WHERE tc.is_debit = 1
+GROUP BY tc.category_id, tc.category_name
+ORDER BY total_rwf DESC;
+
+-- READ 4: transactions above 5000 RWF
+SELECT external_tx_id, amount, fee, balance_after, transaction_date
+FROM transactions
+WHERE amount > 5000
+ORDER BY amount DESC;
