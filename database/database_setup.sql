@@ -276,3 +276,33 @@ SELECT external_tx_id, amount, fee, balance_after, transaction_date
 FROM transactions
 WHERE amount > 5000
 ORDER BY amount DESC;
+
+-- READ 5: full detail view
+SELECT * FROM vw_transaction_details ORDER BY transaction_date ASC;
+
+-- UPDATE 1: reverse a transaction
+UPDATE transactions SET status = 'reversed', updated_at = NOW() WHERE external_tx_id = '70497610538';
+
+-- verify
+SELECT external_tx_id, status, updated_at FROM transactions WHERE external_tx_id = '70497610538';
+
+-- restore
+UPDATE transactions SET status = 'completed', updated_at = NOW() WHERE external_tx_id = '70497610538';
+
+-- UPDATE 2: add missing phone number
+UPDATE users SET phone_number = '+250789000001', updated_at = NOW() WHERE full_name = 'Jane Smith' AND user_type = 'merchant';
+
+-- INSERT: manual audit log entry
+INSERT INTO system_logs (transaction_id, sms_id, log_level, event_type, message)
+VALUES (1, NULL, 'INFO', 'VALIDATE', 'Manual audit: transaction 76662021700 re-verified by admin on 2024-05-15.');
+
+-- DELETE: clean up old debug logs
+DELETE FROM system_logs WHERE log_level = 'DEBUG' AND created_at < NOW() - INTERVAL 30 DAY;
+
+-- READ 6: row count across all tables
+SELECT 'transaction_categories' AS tbl, COUNT(*) AS row_count FROM transaction_categories
+UNION ALL SELECT 'users',                    COUNT(*) FROM users
+UNION ALL SELECT 'sms_messages',             COUNT(*) FROM sms_messages
+UNION ALL SELECT 'transactions',             COUNT(*) FROM transactions
+UNION ALL SELECT 'transaction_participants', COUNT(*) FROM transaction_participants
+UNION ALL SELECT 'system_logs',              COUNT(*) FROM system_logs;
