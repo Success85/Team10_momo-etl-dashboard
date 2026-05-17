@@ -1,0 +1,326 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "MoMo SMS DB Schemas",
+    "type": "object",
+    "$defs": {
+        "transactionCategory": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "category_id": {
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "category_name": {
+                    "type": "string",
+                    "maxLength": 50
+                },
+                "category_code": {
+                    "type": "string",
+                    "maxLength": 20
+                },
+                "description": {
+                    "type": [
+                        "string",
+                        "null"
+                    ],
+                    "maxLength": 255
+                },
+                "is_debit": {
+                    "type": "boolean"
+                },
+                "created_at": {
+                    "type": "string",
+                    "format": "date-time"
+                },
+                "updated_at": {
+                    "type": "string",
+                    "format": "date-time"
+                }
+            },
+            "required": [
+                "category_id",
+                "category_name",
+                "category_code",
+                "is_debit",
+                "created_at",
+                "updated_at"
+            ]
+        },
+        "user": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "user_id": {
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "full_name": {
+                    "type": "string",
+                    "maxLength": 100
+                },
+                "phone_number": {
+                    "type": [
+                        "string",
+                        "null"
+                    ],
+                    "pattern": "^[+]?[0-9]{9,15}$"
+                },
+                "account_number": {
+                    "type": [
+                        "string",
+                        "null"
+                    ],
+                    "maxLength": 30
+                },
+                "user_type": {
+                    "type": "string",
+                    "enum": [
+                        "account_holder",
+                        "counterparty",
+                        "merchant",
+                        "bank"
+                    ]
+                },
+                "created_at": {
+                    "type": "string",
+                    "format": "date-time"
+                },
+                "updated_at": {
+                    "type": "string",
+                    "format": "date-time"
+                }
+            },
+            "required": [
+                "user_id",
+                "full_name",
+                "user_type",
+                "created_at",
+                "updated_at"
+            ]
+        },
+        "smsMessage": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "sms_id": {
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "protocol": {
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "address": {
+                    "type": "string",
+                    "maxLength": 50
+                },
+                "date_received": {
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "date_sent": {
+                    "type": [
+                        "integer",
+                        "null"
+                    ],
+                    "minimum": 0
+                },
+                "body": {
+                    "type": "string"
+                },
+                "service_center": {
+                    "type": [
+                        "string",
+                        "null"
+                    ],
+                    "maxLength": 20
+                },
+                "read_status": {
+                    "type": "boolean"
+                },
+                "sub_id": {
+                    "type": [
+                        "integer",
+                        "null"
+                    ],
+                    "minimum": 0
+                },
+                "readable_date": {
+                    "type": [
+                        "string",
+                        "null"
+                    ],
+                    "maxLength": 60
+                },
+                "is_processed": {
+                    "type": "boolean"
+                },
+                "created_at": {
+                    "type": "string",
+                    "format": "date-time"
+                }
+            },
+            "required": [
+                "sms_id",
+                "protocol",
+                "address",
+                "date_received",
+                "body",
+                "read_status",
+                "is_processed",
+                "created_at"
+            ]
+        },
+        "transactionParticipant": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "participation_id": {
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "role": {
+                    "type": "string",
+                    "enum": [
+                        "sender",
+                        "receiver"
+                    ]
+                },
+                "user": {
+                    "$ref": "#/$defs/user"
+                },
+                "transaction": {
+                    "$ref": "#/$defs/transaction"
+                },
+                "created_at": {
+                    "type": "string",
+                    "format": "date-time"
+                }
+            },
+            "required": [
+                "participation_id",
+                "role",
+                "user",
+                "transaction",
+                "created_at"
+            ]
+        },
+        "transaction": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "transaction_id": {
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "external_tx_id": {
+                    "type": [
+                        "string",
+                        "null"
+                    ],
+                    "maxLength": 30
+                },
+                "amount": {
+                    "type": "number",
+                    "minimum": 0
+                },
+                "fee": {
+                    "type": "number"
+                },
+                "transaction_date": {
+                    "type": "string",
+                    "format": "date-time"
+                },
+                "balance_after": {
+                    "type": "number"
+                },
+                "note": {
+                    "type": [
+                        "string",
+                        "null"
+                    ],
+                    "maxLength": 500
+                },
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "completed",
+                        "pending",
+                        "failed",
+                        "reversed"
+                    ]
+                },
+                "created_at": {
+                    "type": "string",
+                    "format": "date-time"
+                },
+                "updated_at": {
+                    "type": "string",
+                    "format": "date-time"
+                },
+                "category": {
+                    "$ref": "#/$defs/transactionCategory"
+                },
+                "sms": {
+                    "$ref": "#/$defs/smsMessage"
+                }
+            },
+            "required": [
+                "transaction_id",
+                "fee",
+                "amount",
+                "currency",
+                "transaction_date",
+                "balance_after",
+                "sms",
+                "category",
+                "created_at",
+                "updated_at"
+            ]
+        },
+        "systemLog": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "log_id": {
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "log_level": {
+                    "type": "string",
+                    "enum": [
+                        "INFO",
+                        "WARNING",
+                        "ERROR",
+                        "DEBUG"
+                    ]
+                },
+                "event_type": {
+                    "type": "string",
+                    "maxLength": 50
+                },
+                "message": {
+                    "type": "string"
+                },
+                "transaction": {
+                    "$ref": "#/$defs/transaction"
+                },
+                "sms": {
+                    "$ref": "#/$defs/smsMessage"
+                },
+                "created_at": {
+                    "type": "string",
+                    "format": "date-time"
+                }
+            },
+            "required": [
+                "log_id",
+                "log_level",
+                "event_type",
+                "message",
+                "created_at"
+            ]
+        }
+    }
+}
