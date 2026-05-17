@@ -1,0 +1,213 @@
+{
+    "transactionCategoryResponse": {
+        "data": {
+            "category_id": 1,
+            "category_name": "Incoming Money",
+            "category_code": "INCOMING",
+            "description": "Money received into wallet from another MoMo user",
+            "is_debit": true,
+            "created_at": "2026-05-10T09:15:00Z",
+            "updated_at": "2026-05-10T09:15:00Z"
+        },
+        "relationships": {
+            "transactions": {
+                "data": [
+                    {
+                        "transaction_id": 1,
+                        "external_tx_id": "76662021700"
+                    }
+                ]
+            }
+        }
+    },
+    "userResponse": {
+        "data": {
+            "user_id": 1,
+            "full_name": "Herve Calixte",
+            "phone_number": "+250701234567",
+            "account_number": "000123",
+            "user_type": "account_holder",
+            "created_at": "2026-05-10T08:00:00Z",
+            "updated_at": "2026-05-10T08:00:00Z"
+        },
+        "relationships": {
+            "transactions": {
+                "data": [
+                    {
+                        "role": "receiver",
+                        "transaction": {
+                            "transaction_id": 1,
+                            "external_tx_id": "76662021700",
+                            "amount": 2000.0,
+                            "fee": 0.0,
+                            "transaction_date": "2024-05-10T16:30:51Z",
+                            "balance_after": 2000.0,
+                            "note": "Payment is made",
+                            "status": "completed",
+                            "created_at": "2026-05-16T15:34:22Z",
+                            "updated_at": "2026-05-16T15:34:22Z"
+                        }
+                    }
+                ]
+            }
+        }
+    },
+    "smsMessageResponse": {
+        "data": {
+            "sms_id": 1,
+            "protocol": 0,
+            "address": "M-Money",
+            "date_received": 1715351458724,
+            "date_sent": 1715351451000,
+            "body": "You have received 2000 RWF from Jane Smith (*********013) on your mobile money account at 2024-05-10 16:30:51. Your new balance: 2000 RWF. Financial Transaction Id: 76662021700.",
+            "service_center": "+250788110381",
+            "read_status": true,
+            "sub_id": 6,
+            "readable_date": "2024-05-10 16:30:58",
+            "is_processed": true,
+            "created_at": "2026-05-16T15:34:22Z"
+        },
+        "relationships": {
+            "transactions": {
+                "data": [
+                    {
+                        "transaction_id": 1,
+                        "external_tx_id": "76662021700"
+                    }
+                ]
+            }
+        }
+    },
+    "transactionResponse": {
+        "data": {
+            "transaction_id": 1,
+            "external_tx_id": "76662021700",
+            "amount": 2000.0,
+            "fee": 0.0,
+            "transaction_date": "2024-05-10T16:30:51Z",
+            "balance_after": 2000.0,
+            "note": "Payment is made",
+            "status": "completed",
+            "created_at": "2026-05-16T15:34:22Z",
+            "updated_at": "2026-05-16T15:34:22Z"
+        },
+        "included": {
+            "category": {
+                "category_id": 1,
+                "category_name": "Incoming Money",
+                "category_code": "INCOMING",
+                "description": "Money received into wallet from another MoMo user",
+                "is_debit": true,
+                "created_at": "2026-05-10T09:15:00Z",
+                "updated_at": "2026-05-10T09:15:00Z"
+            },
+            "sms": {
+                "sms_id": 1,
+                "protocol": 0,
+                "address": "M-Money",
+                "date_received": 1715351458724,
+                "date_sent": 1715351451000,
+                "body": "You have received 2000 RWF from Jane Smith (*********013) on your mobile money account at 2024-05-10 16:30:51. Your new balance: 2000 RWF. Financial Transaction Id: 76662021700.",
+                "service_center": "+250788110381",
+                "read_status": true,
+                "sub_id": 6,
+                "readable_date": "2024-05-10 16:30:58",
+                "is_processed": true,
+                "created_at": "2026-05-16T15:34:22Z"
+            },
+            "participants": [
+                {
+                    "role": "sender",
+                    "user": {
+                        "user_id": 2,
+                        "full_name": "Jane Smith",
+                        "phone_number": "+250702222222",
+                        "account_number": "000456",
+                        "user_type": "counterparty",
+                        "created_at": "2026-05-10T08:05:00Z",
+                        "updated_at": "2026-05-10T08:05:00Z"
+                    }
+                },
+                {
+                    "role": "receiver",
+                    "user": {
+                        "user_id": 1,
+                        "full_name": "Herve Calixte",
+                        "phone_number": "+250701234567",
+                        "account_number": "000123",
+                        "user_type": "account_holder",
+                        "created_at": "2026-05-10T08:00:00Z",
+                        "updated_at": "2026-05-10T08:00:00Z"
+                    }
+                }
+            ]
+        }
+    },
+    "transactionParticipantResponse": {
+        "data": {
+            "participation_id": 1,
+            "role": "receiver",
+            "created_at": "2026-05-17T10:00:07Z"
+        },
+        "included": {
+            "user": {
+                "user_id": 1,
+                "full_name": "Herve Calixte",
+                "phone_number": "+250701234567",
+                "account_number": "000123",
+                "user_type": "account_holder",
+                "created_at": "2026-05-10T08:00:00Z",
+                "updated_at": "2026-05-10T08:00:00Z"
+            },
+            "transaction": {
+                "transaction_id": 1,
+                "external_tx_id": "76662021700",
+                "amount": 2000.0,
+                "fee": 0.0,
+                "transaction_date": "2024-05-10T16:30:51Z",
+                "balance_after": 2000.0,
+                "note": "Payment is made",
+                "status": "completed",
+                "created_at": "2026-05-16T15:34:22Z",
+                "updated_at": "2026-05-16T15:34:22Z"
+            }
+        }
+    },
+    "systemLogResponse": {
+        "data": {
+            "log_id": 1,
+            "log_level": "INFO",
+            "event_type": "IMPORT",
+            "message": "Imported SMS record and created transaction",
+            "created_at": "2026-05-17T10:00:08Z"
+        },
+        "included": {
+            "transaction": {
+                "transaction_id": 1,
+                "external_tx_id": "76662021700",
+                "amount": 2000.0,
+                "fee": 0.0,
+                "transaction_date": "2024-05-10T16:30:51Z",
+                "balance_after": 2000.0,
+                "note": "Payment is made",
+                "status": "completed",
+                "created_at": "2026-05-16T15:34:22Z",
+                "updated_at": "2026-05-16T15:34:22Z"
+            },
+            "sms": {
+                "sms_id": 1,
+                "protocol": 0,
+                "address": "M-Money",
+                "date_received": 1715351458724,
+                "date_sent": 1715351451000,
+                "body": "You have received 2000 RWF from Jane Smith (*********013) on your mobile money account at 2024-05-10 16:30:51. Your new balance: 2000 RWF. Financial Transaction Id: 76662021700.",
+                "service_center": "+250788110381",
+                "read_status": true,
+                "sub_id": 6,
+                "readable_date": "2024-05-10 16:30:58",
+                "is_processed": true,
+                "created_at": "2026-05-16T15:34:22Z"
+            }
+        }
+    }
+}
