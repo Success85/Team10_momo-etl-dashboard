@@ -1,0 +1,83 @@
+{
+    "completeTransactionResponse": {
+        "data": {
+            "transaction_id": 3,
+            "external_tx_id": "88990011223",
+            "amount": 25000.0,
+            "fee": 100.0,
+            "transaction_date": "2024-05-12T14:05:30Z",
+            "balance_after": 125000.0,
+            "note": "money transfer is made",
+            "status": "completed",
+            "created_at": "2026-05-17T10:00:06Z",
+            "updated_at": "2026-05-17T10:00:06Z"
+        },
+        "included": {
+            "category": {
+                "category_id": 4,
+                "category_name": "Mobile Transfer",
+                "category_code": "MOB_TRANSFER",
+                "description": "Direct transfer sent to another mobile number via MoMo",
+                "is_debit": false,
+                "created_at": "2026-05-10T09:15:00Z",
+                "updated_at": "2026-05-10T09:15:00Z"
+            },
+            "sms": {
+                "sms_id": 4,
+                "protocol": 0,
+                "address": "M-Money",
+                "date_received": 1715522730000,
+                "date_sent": 1715522729000,
+                "body": "You have sent 25,000 RWF to  Henirite Cedric. Fee 0.00 RWF. Balance 125,000 RWF. Financial Transaction Id: 88990011223.",
+                "service_center": "+250788110381",
+                "read_status": true,
+                "sub_id": 6,
+                "readable_date": "2024-05-12 14:05:30",
+                "is_processed": true,
+                "created_at": "2026-05-17T10:00:05Z"
+            },
+            "participants": [
+                {
+                    "role": "sender",
+                    "user": {
+                        "user_id": 1,
+                        "full_name": "Herve Calixte",
+                        "phone_number": "+250701234567",
+                        "account_number": "000123",
+                        "user_type": "account_holder",
+                        "created_at": "2026-05-10T08:00:00Z",
+                        "updated_at": "2026-05-10T08:00:00Z"
+                    }
+                },
+                {
+                    "role": "receiver",
+                    "user": {
+                        "user_id": 5,
+                        "full_name": "Henirite Cedric",
+                        "phone_number": "+250703333333",
+                        "account_number": "000789",
+                        "user_type": "counterparty",
+                        "created_at": "2026-05-10T08:20:00Z",
+                        "updated_at": "2026-05-10T08:20:00Z"
+                    }
+                }
+            ],
+            "logs": [
+                {
+                    "log_id": 101,
+                    "log_level": "INFO",
+                    "event_type": "IMPORT",
+                    "message": "Imported SMS record and created transaction",
+                    "created_at": "2026-05-17T10:00:07Z"
+                },
+                {
+                    "log_id": 102,
+                    "log_level": "INFO",
+                    "event_type": "PARSE",
+                    "message": "Parsed sender, receiver, and amounts from SMS body",
+                    "created_at": "2026-05-17T10:00:08Z"
+                }
+            ]
+        }
+    }
+}
