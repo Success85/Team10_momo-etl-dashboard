@@ -49,5 +49,78 @@ def extract_balance(body: str) -> float:
         return float(match.group(1).replace(",", ""))
     return 0.0
 
+def classify_transaction(body: str) -> str:
+    body_lower = body.lower()
+
+    if "you have received" in body_lower:
+        return "INCOMING"
+
+    if "bank deposit" in body_lower:
+        return "BANK_DEP"
+
+    if "airtime" in body_lower or "bundle" in body_lower:
+        return "AIRTIME"
+
+    if "*165*s*" in body_lower:
+        return "MOB_TRANSFER"
+
+    if "your payment of" in body_lower:
+        if "to " in body_lower:
+            return "MERCHANT_PAY"
+        return "UTILITY"
+
+    if "withdraw" in body_lower:
+        return "WITHDRAWAL"
+
+    return "UNKNOWN"
+
+
+
+
+def extract_parties(text):
+    sender = "Unknown Sender"
+    receiver = "Unknown Receiver"
+
+    result = re.search(r"received .*? from ([A-Za-z\s]+) \(", text)
+
+    if result:
+        sender = result.group(1).strip()
+        receiver = "Self"
+        return {"sender": sender, "receiver": receiver}
+
+    if "A bank deposit" in text:
+        sender = "Bank"
+        receiver = "Self"
+        return {"sender": sender, "receiver": receiver}
+
+    result = re.search(r"transferred to ([A-Za-z\s]+) \(", text)
+    if result:
+        sender = "Self"
+        receiver = result.group(1).strip()
+        return {"sender": sender, "receiver": receiver}
+
+    result = re.search(r"payment of .*? to ([A-Za-z\s]+) \d+ has been", text)
+    if result:
+        sender = "Self"
+        receiver = result.group(1).strip()
+        return {"sender": sender, "receiver": receiver}
+
+    result = re.search(r"payment of .*? to (.*?) with token", text)
+    if result:
+        sender = "Self"
+        receiver = result.group(1).strip()
+        return {"sender": sender, "receiver": receiver}
+
+    result = re.search(r"transaction of .*? by (.*?) on your", text)
+    if result:
+        sender = "Self"
+        raw_receiver = result.group(1).strip()
+        receiver = re.sub(r'\s+', ' ', raw_receiver) 
+        return {"sender": sender, "receiver": receiver}
+
+    return {
+        "sender": sender,
+        "receiver": receiver
+    }
 
 
