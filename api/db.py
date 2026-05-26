@@ -51,6 +51,26 @@ def init_db():
                 ON UPDATE CASCADE ON DELETE SET NULL
         )
     """)
+
+    #The sms_messages table to store the raw SMS data for processing
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS sms_messages (
+        sms_id         INTEGER PRIMARY KEY AUTOINCREMENT,
+        protocol       INTEGER NOT NULL DEFAULT 0,
+        address        TEXT    NOT NULL,
+        date_received  INTEGER NOT NULL,
+        date_sent      INTEGER,
+        body           TEXT    NOT NULL,
+        service_center TEXT,
+        read_status    INTEGER NOT NULL DEFAULT 0 CHECK (read_status IN (0, 1)),
+        sub_id         INTEGER,
+        readable_date  TEXT,
+        is_processed   INTEGER NOT NULL DEFAULT 0 CHECK (is_processed IN (0, 1)),
+        is_transaction INTEGER NOT NULL DEFAULT 1 CHECK (is_transaction IN (0, 1)),
+        created_at     TEXT    NOT NULL DEFAULT (datetime('now'))
+    )
+""")
  
     conn.commit()
     conn.close()
