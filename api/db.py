@@ -71,6 +71,23 @@ def init_db():
         created_at     TEXT    NOT NULL DEFAULT (datetime('now'))
     )
     """)
+
+    # The system_logs table to store logs related to the processing of transactions and SMS messages
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS system_logs (
+            log_id         INTEGER PRIMARY KEY AUTOINCREMENT,
+            transaction_id INTEGER,
+            sms_id         INTEGER,
+            log_level      TEXT NOT NULL DEFAULT 'INFO'
+                           CHECK (log_level IN ('INFO', 'WARNING', 'ERROR', 'DEBUG')),
+            event_type     TEXT NOT NULL
+                           CHECK (event_type IN ('IMPORT', 'PARSE', 'VALIDATE', 'CRUD', 'SYSTEM', 'API')),
+            message        TEXT NOT NULL,
+            created_at     TEXT NOT NULL DEFAULT (datetime('now')),
+            FOREIGN KEY (transaction_id) REFERENCES transactions (id) ON DELETE SET NULL,
+            FOREIGN KEY (sms_id) REFERENCES sms_messages (sms_id) ON DELETE SET NULL
+        )
+    """)
  
     conn.commit()
     conn.close()
