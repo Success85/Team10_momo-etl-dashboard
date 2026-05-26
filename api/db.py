@@ -14,6 +14,7 @@ def init_db():
     conn = get_connection()
     cursor = conn.cursor()
  
+    #Transaction Categories Table
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS transaction_categories (
             category_id   INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -25,9 +26,7 @@ def init_db():
         )
     """)
  
-    # The transactions table is designed to store all relevant information about each transaction.
-    # internal_tx_id: TxId from SMS body, used for deduplication and linking to external_tx_id
-    # transaction_type: mirrors category_code for quick filtering without a JOIN
+    # The transactions table 
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS transactions (
             id               INTEGER PRIMARY KEY AUTOINCREMENT,
