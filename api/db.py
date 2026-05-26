@@ -70,7 +70,7 @@ def init_db():
         is_transaction INTEGER NOT NULL DEFAULT 1 CHECK (is_transaction IN (0, 1)),
         created_at     TEXT    NOT NULL DEFAULT (datetime('now'))
     )
-""")
+    """)
  
     conn.commit()
     conn.close()
