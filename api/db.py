@@ -89,5 +89,35 @@ def init_db():
         )
     """)
  
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_tx_type   ON transactions (transaction_type)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_tx_date   ON transactions (transaction_date)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_tx_status ON transactions (status)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_tx_amount ON transactions (amount)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_sms_proc  ON sms_messages (is_processed)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_log_level ON system_logs  (log_level)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_log_event ON system_logs  (event_type)")
+ 
+    categories = [
+        ('Incoming Money',   'INCOMING',     'Money received into wallet from another MoMo user',               0),
+        ('Merchant Payment', 'MERCHANT_PAY', 'Payment to a registered MoMo merchant or agent code',            1),
+        ('Bank Deposit',     'BANK_DEP',     'Cash deposited from a bank account into MoMo wallet',             0),
+        ('Mobile Transfer',  'MOB_TRANSFER', 'Direct transfer sent to another mobile number via MoMo',          1),
+        ('Token Payment',    'TOKEN_PAY',    'Payment using a token — covers airtime, WASAC, bundles, packs',   1),
+        ('Direct Debit',     'DIRECT_DEBIT', 'Transaction debited by a company directly from the MoMo wallet',  1),
+        ('Unknown',          'UNKNOWN',      'Transaction type could not be identified from SMS body',           1),
+    ]
+ 
+    cursor.executemany("""
+        INSERT OR IGNORE INTO transaction_categories
+            (category_name, category_code, description, is_debit)
+        VALUES (?, ?, ?, ?)
+    """, categories)
+ 
     conn.commit()
     conn.close()
+    print("Database initialised.")
+ 
+ 
+    if __name__ == '__main__':
+        init_db()
+   
