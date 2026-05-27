@@ -34,10 +34,16 @@ def extract_amount(body: str) -> float:
     match = re.search(r"(\d{1,3}(?:,\d{3})*|\d+)\s*RWF", body)
     if match:
         return float(match.group(1).replace(",", ""))
+    match = re.search(r"RWF\s*(\d{1,3}(?:,\d{3})*|\d+)", body)
+    if match:
+        return float(match.group(1).replace(",", ""))
     return 0.0
 
 def extract_fee(body: str) -> float:
     match = re.search(r"Fee(?: was|:)?\s*(\d{1,3}(?:,\d{3})*|\d+)", body)
+    if match:
+        return float(match.group(1).replace(",", ""))
+    match = re.search(r"Fee(?: was|:)?\s*RWF\s*(\d{1,3}(?:,\d{3})*|\d+)", body)
     if match:
         return float(match.group(1).replace(",", ""))
     return 0.0
@@ -58,16 +64,31 @@ def classify_transaction(body: str) -> str:
     if "bank deposit" in body_lower:
         return "BANK_DEP"
 
+    if "deposit" in body_lower:
+        return "CASH_DEP"
+
     if "airtime" in body_lower or "bundle" in body_lower:
         return "AIRTIME"
 
     if "*165*s*" in body_lower:
         return "MOB_TRANSFER"
 
+    if "you have transferred" in body_lower:
+        return "MOB_TRANSFER"
+
+    if "your transaction to" in body_lower:
+        return "MOB_TRANSFER"
+
     if "your payment of" in body_lower:
         if "to " in body_lower:
             return "MERCHANT_PAY"
         return "UTILITY"
+
+    if "a transaction of" in body_lower and "on your momo account" in body_lower:
+        return "MERCHANT_PAY"
+
+    if "transaction with amount" in body_lower and " for " in body_lower:
+        return "MERCHANT_PAY"
 
     if "withdraw" in body_lower:
         return "WITHDRAWAL"
@@ -93,7 +114,12 @@ def extract_parties(text):
         receiver = "Self"
         return {"sender": sender, "receiver": receiver}
 
-    result = re.search(r"transferred to ([A-Za-z\s]+) \(", text)
+    if "deposit" in text.lower() and "receiver" in text.lower():
+        sender = "Bank"
+        receiver = "Self"
+        return {"sender": sender, "receiver": receiver}
+
+    result = re.search(r"transferred .*? to ([A-Za-z\s]+) \(", text)
     if result:
         sender = "Self"
         receiver = result.group(1).strip()
@@ -116,6 +142,18 @@ def extract_parties(text):
         sender = "Self"
         raw_receiver = result.group(1).strip()
         receiver = re.sub(r'\s+', ' ', raw_receiver) 
+        return {"sender": sender, "receiver": receiver}
+
+    result = re.search(r"transaction with amount .*? for ([A-Za-z0-9\s&'.-]+) with message", text, re.IGNORECASE)
+    if result:
+        sender = "Self"
+        receiver = result.group(1).strip()
+        return {"sender": sender, "receiver": receiver}
+
+    result = re.search(r"transaction to ([A-Za-z\s]+) \(", text, re.IGNORECASE)
+    if result:
+        sender = "Self"
+        receiver = result.group(1).strip()
         return {"sender": sender, "receiver": receiver}
 
     return {
