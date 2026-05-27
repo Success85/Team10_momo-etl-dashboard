@@ -65,6 +65,13 @@ def derive_user_type(full_name: str, role: str, category_code: str) -> str:
     return "counterparty"
 
 
+def is_unknown_participant(full_name: str | None) -> bool:
+    if not full_name:
+        return True
+    lowered = full_name.strip().lower()
+    return lowered in {"unknown sender", "unknown receiver", "unknown"}
+
+
 def build_transaction_notes(parsed_sms: dict) -> str | None:
     raw_sms_text = parsed_sms.get("raw_sms")
     if not raw_sms_text:
@@ -231,3 +238,156 @@ def mark_sms_as_processed(db_conn: pymysql.Connection, sms_record_id: int) -> No
         )
 
 
+def import_sms_to_database(
+    xml_path: str,
+    host: str,
+    user: str,
+    password: str,
+    database: str,
+    port: int = 3306,
+) -> dict:
+    db_conn = open_db_connection(host=host, user=user, password=password, database=database, port=port)
+    sms_records = load_sms_xml(xml_path)
+    import_summary = {
+        "total_sms": len(sms_records),
+        "inserted_transactions": 0,
+        "skipped_unknown": 0,
+        "skipped_invalid": 0,
+        "failed": 0,
+    }
+
+    try:
+        record_log_event(db_conn, "IMPORT", f"XML import started. Total SMS records: {len(sms_records)}.")
+        db_conn.commit()
+
+        for sms_record in sms_records:
+            sms_record_id = None
+            try:
+                sms_record_id = ensure_sms_record(db_conn, sms_record)
+                parsed_sms = parse_sms(sms_record)
+
+                transaction_category_code = parsed_sms.get("category_code") or "UNKNOWN"
+                if transaction_category_code == "UNKNOWN":
+                    import_summary["skipped_unknown"] += 1
+                    record_log_event(
+                        db_conn,
+                        "PARSE",
+                        "Unrecognized transaction type; left unprocessed.",
+                        log_level="WARNING",
+                        sms_record_id=sms_record_id,
+                    )
+                    db_conn.commit()
+                    continue
+
+                transaction_category_id = fetch_category_id(db_conn, transaction_category_code)
+                if transaction_category_id is None:
+                    import_summary["skipped_unknown"] += 1
+                    record_log_event(
+                        db_conn,
+                        "PARSE",
+                        f"Category code {transaction_category_code} missing in DB.",
+                        log_level="WARNING",
+                        sms_record_id=sms_record_id,
+                    )
+                    db_conn.commit()
+                    continue
+
+                if (parsed_sms.get("amount") or 0.0) <= 0:
+                    import_summary["skipped_invalid"] += 1
+                    record_log_event(
+                        db_conn,
+                        "VALIDATE",
+                        "Transaction amount missing or invalid; left unprocessed.",
+                        log_level="WARNING",
+                        sms_record_id=sms_record_id,
+                    )
+                    db_conn.commit()
+                    continue
+
+                transaction_timestamp = resolve_transaction_timestamp(sms_record, parsed_sms)
+                if not transaction_timestamp:
+                    import_summary["skipped_invalid"] += 1
+                    record_log_event(
+                        db_conn,
+                        "VALIDATE",
+                        "Transaction date missing; left unprocessed.",
+                        log_level="WARNING",
+                        sms_record_id=sms_record_id,
+                    )
+                    db_conn.commit()
+                    continue
+
+                transaction_record_id = ensure_transaction_record(
+                    db_conn,
+                    parsed_sms,
+                    sms_record_id,
+                    transaction_category_id,
+                    transaction_timestamp,
+                )
+                if transaction_record_id is None:
+                    import_summary["failed"] += 1
+                    record_log_event(
+                        db_conn,
+                        "CRUD",
+                        "Failed to insert transaction.",
+                        log_level="ERROR",
+                        sms_record_id=sms_record_id,
+                    )
+                    db_conn.commit()
+                    continue
+
+                sender_name = normalize_participant_name(parsed_sms.get("sender"))
+                receiver_name = normalize_participant_name(parsed_sms.get("receiver"))
+
+                if sender_name and not is_unknown_participant(sender_name):
+                    sender_type = derive_user_type(sender_name, "sender", transaction_category_code)
+                    link_transaction_participant(
+                        db_conn,
+                        transaction_record_id,
+                        sender_name,
+                        sender_type,
+                        "sender",
+                    )
+
+                if receiver_name and not is_unknown_participant(receiver_name):
+                    receiver_type = derive_user_type(receiver_name, "receiver", transaction_category_code)
+                    link_transaction_participant(
+                        db_conn,
+                        transaction_record_id,
+                        receiver_name,
+                        receiver_type,
+                        "receiver",
+                    )
+
+                mark_sms_as_processed(db_conn, sms_record_id)
+                import_summary["inserted_transactions"] += 1
+
+                record_log_event(
+                    db_conn,
+                    "CRUD",
+                    f"Inserted transaction {parsed_sms.get('external_tx_id') or transaction_record_id}.",
+                    sms_record_id=sms_record_id,
+                    transaction_record_id=transaction_record_id,
+                )
+                db_conn.commit()
+            except Exception as exc:
+                db_conn.rollback()
+                import_summary["failed"] += 1
+                try:
+                    record_log_event(
+                        db_conn,
+                        "SYSTEM",
+                        f"Unhandled error while processing SMS: {exc}",
+                        log_level="ERROR",
+                        sms_record_id=sms_record_id,
+                    )
+                    db_conn.commit()
+                except Exception:
+                    db_conn.rollback()
+
+        record_log_event(db_conn, "IMPORT", "Batch processing complete.")
+        db_conn.commit()
+    finally:
+        db_conn.close()
+
+    return import_summary
