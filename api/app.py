@@ -315,5 +315,43 @@ class MoMoHandler(BaseHTTPRequestHandler):
         })
 
 
-# TODO: Implement the POST method here(SUCCESS)
+# TODO: Implement the POST method here(SUCCESS)             (SUCCESS)             (SUCCESS)             (SUCCESS)             (SUCCESS)             (SUCCESS)             (SUCCESS
 #   def do_POST(self):
+    #  """Handle POST requests - creating new data."""
+
+    # Add code here to handle POST requests for creating new transactions. This will involve reading the JSON body, validating the data, assigning a new ID, and adding the transaction to the list. Don't forget to check authentication and send appropriate responses for success and error cases.
+
+
+
+
+
+
+
+
+
+
+
+
+
+# TODO: We will have to change the host and port later to make it accessible over the network. For now, it's just for local testing.
+
+# This is the entry point of the application. It sets up and starts the HTTP server.
+# Its for  local testing.
+if __name__ == "__main__":
+    server_address = ("localhost", 8000)
+
+    server = HTTPServer(server_address, MoMoHandler)
+
+    print("=" * 50)
+    print("  MoMo API Server is running!")
+    print("  Address: http://localhost:8000")
+    print("=" * 50)
+    print("  Endpoints:")
+    print("    GET    /transactions      - List all")
+    print("    GET    /transactions/{id} - View one")
+    print("    POST   /transactions      - Add new")
+    print("    PUT    /transactions/{id} - Update")
+    print("    DELETE /transactions/{id} - Remove")
+    print("=" * 50)
+
+    server.serve_forever()
