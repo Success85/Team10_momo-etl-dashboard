@@ -204,7 +204,7 @@ class MoMoHandler(BaseHTTPRequestHandler):
         body_string = body_bytes.decode("utf-8")
         return json.loads(body_string)
     
-# This helper method is used to extract the numeric ID from the URL path for endpoints that include an ID parameter (e.g., /transactions/5). It returns the ID as an integer or None if the path doesn't contain a valid ID.
+# This helper method is used to extract the numeric ID from the URL path for endpoints that include an ID parameter 
     def get_id_from_path(self):
         """
         Extract the numeric ID from the URL path.
@@ -228,11 +228,11 @@ class MoMoHandler(BaseHTTPRequestHandler):
         return None
 #    The following methods handle the different HTTP endpoints (GET, POST, PUT, DELETE) and implement the logic for each endpoint.
     def do_GET(self):
-        """Handle GET requests — reading/fetching data."""
+        """Handle GET requests - reading/fetching data."""
 
         if not check_auth(self.headers):
             self.send_json_response(401, {"error": "Unauthorized. Valid credentials required."})
-            return  # Stop here — don't serve food to unauthorized people
+            return  
 
         if self.path == "/transactions" or self.path == "/transactions/":
             self.send_json_response(200, transactions)
@@ -253,6 +253,66 @@ class MoMoHandler(BaseHTTPRequestHandler):
 
         else:
             self.send_json_response(404, {"error": "Endpoint not found. Try /transactions"})
+
+# The following methods handle the different HTTP endpoints ( PUT, DELETE) and implement the logic for each endpoint.
+    def do_PUT(self):
+        """Handle PUT requests - updating existing data."""
+
+        if not check_auth(self.headers):
+            self.send_json_response(401, {"error": "Unauthorized. Valid credentials required."})
+            return
+
+        transaction_id = self.get_id_from_path()
+
+        if transaction_id is None:
+            self.send_json_response(400, {"error": "Please provide a transaction ID. Example: /transactions/5"})
+            return
+
+        transaction = self.find_transaction(transaction_id)
+
+        if transaction is None:
+            self.send_json_response(404, {"error": f"Transaction {transaction_id} not found."})
+            return
+
+        try:
+            body = self.read_body()
+
+            for key in body:
+                if key != "id":
+                    transaction[key] = body[key]
+
+            self.send_json_response(200, {
+                "message": "Transaction updated successfully.",
+                "transaction": transaction
+            })
+
+        except Exception as e:
+            self.send_json_response(400, {"error": f"Bad request: {str(e)}"})
+
+    def do_DELETE(self):
+        """Handle DELETE requests - removing data."""
+
+        if not check_auth(self.headers):
+            self.send_json_response(401, {"error": "Unauthorized. Valid credentials required."})
+            return
+
+        transaction_id = self.get_id_from_path()
+
+        if transaction_id is None:
+            self.send_json_response(400, {"error": "Please provide a transaction ID. Example: /transactions/5"})
+            return
+
+        transaction = self.find_transaction(transaction_id)
+
+        if transaction is None:
+            self.send_json_response(404, {"error": f"Transaction {transaction_id} not found."})
+            return
+
+        transactions.remove(transaction)
+
+        self.send_json_response(200, {
+            "message": f"Transaction {transaction_id} deleted successfully."
+        })
 
 
 # TODO: Implement the POST method here(SUCCESS)
