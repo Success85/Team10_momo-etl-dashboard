@@ -1,5 +1,8 @@
-import pymysql
+import json
 from datetime import datetime
+from pathlib import Path
+
+import pymysql
 
 from sms_parser import parse_sms
 from xml_to_json import load_sms_xml
@@ -245,6 +248,8 @@ def import_sms_to_database(
     password: str,
     database: str,
     port: int = 3306,
+    output_path: str = "data/processed/dashboard.json",
+    batch_size: int = 200,
 ) -> dict:
     db_conn = open_db_connection(host=host, user=user, password=password, database=database, port=port)
     sms_records = load_sms_xml(xml_path)
@@ -255,20 +260,42 @@ def import_sms_to_database(
         "skipped_invalid": 0,
         "failed": 0,
     }
+    parsed_output: list[dict] = []
+    batch_summary = {
+        "inserted_transactions": 0,
+        "skipped_unknown": 0,
+        "skipped_invalid": 0,
+        "failed": 0,
+    }
+    processed_in_batch = 0
+    if batch_size <= 0:
+        batch_size = 1
 
     try:
         record_log_event(db_conn, "IMPORT", f"XML import started. Total SMS records: {len(sms_records)}.")
         db_conn.commit()
 
-        for sms_record in sms_records:
+        for sms_index, sms_record in enumerate(sms_records, start=1):
             sms_record_id = None
+            savepoint_name = f"sms_{sms_index}"
+            with db_conn.cursor() as cursor:
+                cursor.execute(f"SAVEPOINT {savepoint_name}")
             try:
                 sms_record_id = ensure_sms_record(db_conn, sms_record)
                 parsed_sms = parse_sms(sms_record)
+                parsed_output.append(
+                    {
+                        "sms_id": sms_record_id,
+                        "date_received": sms_record.get("date"),
+                        "readable_date": sms_record.get("readable_date"),
+                        "address": sms_record.get("address"),
+                        **parsed_sms,
+                    }
+                )
 
                 transaction_category_code = parsed_sms.get("category_code") or "UNKNOWN"
                 if transaction_category_code == "UNKNOWN":
-                    import_summary["skipped_unknown"] += 1
+                    batch_summary["skipped_unknown"] += 1
                     record_log_event(
                         db_conn,
                         "PARSE",
@@ -276,12 +303,14 @@ def import_sms_to_database(
                         log_level="WARNING",
                         sms_record_id=sms_record_id,
                     )
-                    db_conn.commit()
+                    with db_conn.cursor() as cursor:
+                        cursor.execute(f"RELEASE SAVEPOINT {savepoint_name}")
+                    processed_in_batch += 1
                     continue
 
                 transaction_category_id = fetch_category_id(db_conn, transaction_category_code)
                 if transaction_category_id is None:
-                    import_summary["skipped_unknown"] += 1
+                    batch_summary["skipped_unknown"] += 1
                     record_log_event(
                         db_conn,
                         "PARSE",
@@ -289,11 +318,13 @@ def import_sms_to_database(
                         log_level="WARNING",
                         sms_record_id=sms_record_id,
                     )
-                    db_conn.commit()
+                    with db_conn.cursor() as cursor:
+                        cursor.execute(f"RELEASE SAVEPOINT {savepoint_name}")
+                    processed_in_batch += 1
                     continue
 
                 if (parsed_sms.get("amount") or 0.0) <= 0:
-                    import_summary["skipped_invalid"] += 1
+                    batch_summary["skipped_invalid"] += 1
                     record_log_event(
                         db_conn,
                         "VALIDATE",
@@ -301,12 +332,14 @@ def import_sms_to_database(
                         log_level="WARNING",
                         sms_record_id=sms_record_id,
                     )
-                    db_conn.commit()
+                    with db_conn.cursor() as cursor:
+                        cursor.execute(f"RELEASE SAVEPOINT {savepoint_name}")
+                    processed_in_batch += 1
                     continue
 
                 transaction_timestamp = resolve_transaction_timestamp(sms_record, parsed_sms)
                 if not transaction_timestamp:
-                    import_summary["skipped_invalid"] += 1
+                    batch_summary["skipped_invalid"] += 1
                     record_log_event(
                         db_conn,
                         "VALIDATE",
@@ -314,7 +347,9 @@ def import_sms_to_database(
                         log_level="WARNING",
                         sms_record_id=sms_record_id,
                     )
-                    db_conn.commit()
+                    with db_conn.cursor() as cursor:
+                        cursor.execute(f"RELEASE SAVEPOINT {savepoint_name}")
+                    processed_in_batch += 1
                     continue
 
                 transaction_record_id = ensure_transaction_record(
@@ -325,7 +360,7 @@ def import_sms_to_database(
                     transaction_timestamp,
                 )
                 if transaction_record_id is None:
-                    import_summary["failed"] += 1
+                    batch_summary["failed"] += 1
                     record_log_event(
                         db_conn,
                         "CRUD",
@@ -333,7 +368,9 @@ def import_sms_to_database(
                         log_level="ERROR",
                         sms_record_id=sms_record_id,
                     )
-                    db_conn.commit()
+                    with db_conn.cursor() as cursor:
+                        cursor.execute(f"RELEASE SAVEPOINT {savepoint_name}")
+                    processed_in_batch += 1
                     continue
 
                 sender_name = normalize_participant_name(parsed_sms.get("sender"))
@@ -360,7 +397,7 @@ def import_sms_to_database(
                     )
 
                 mark_sms_as_processed(db_conn, sms_record_id)
-                import_summary["inserted_transactions"] += 1
+                batch_summary["inserted_transactions"] += 1
 
                 record_log_event(
                     db_conn,
@@ -369,10 +406,14 @@ def import_sms_to_database(
                     sms_record_id=sms_record_id,
                     transaction_record_id=transaction_record_id,
                 )
-                db_conn.commit()
+                with db_conn.cursor() as cursor:
+                    cursor.execute(f"RELEASE SAVEPOINT {savepoint_name}")
+                processed_in_batch += 1
             except Exception as exc:
-                db_conn.rollback()
-                import_summary["failed"] += 1
+                with db_conn.cursor() as cursor:
+                    cursor.execute(f"ROLLBACK TO SAVEPOINT {savepoint_name}")
+                    cursor.execute(f"RELEASE SAVEPOINT {savepoint_name}")
+                batch_summary["failed"] += 1
                 try:
                     record_log_event(
                         db_conn,
@@ -381,13 +422,34 @@ def import_sms_to_database(
                         log_level="ERROR",
                         sms_record_id=sms_record_id,
                     )
-                    db_conn.commit()
                 except Exception:
-                    db_conn.rollback()
+                    pass
+                processed_in_batch += 1
+
+            if processed_in_batch >= batch_size:
+                db_conn.commit()
+                for key, value in batch_summary.items():
+                    import_summary[key] += value
+                batch_summary = {
+                    "inserted_transactions": 0,
+                    "skipped_unknown": 0,
+                    "skipped_invalid": 0,
+                    "failed": 0,
+                }
+                processed_in_batch = 0
+
+        if processed_in_batch:
+            db_conn.commit()
+            for key, value in batch_summary.items():
+                import_summary[key] += value
 
         record_log_event(db_conn, "IMPORT", "Batch processing complete.")
         db_conn.commit()
     finally:
         db_conn.close()
+
+    Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+    with open(output_path, "w", encoding="utf-8") as file_handle:
+        json.dump(parsed_output, file_handle, ensure_ascii=True, indent=2)
 
     return import_summary
