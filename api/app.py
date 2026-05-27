@@ -172,3 +172,88 @@ def check_auth(headers):
     except Exception:
         return False
 
+
+
+class MoMoHandler(BaseHTTPRequestHandler):
+    """
+    This class is a waiter. Each time a customer (client) sends
+    When a request comes into Python, it allocates an instance of this class to deal with it.
+
+    We define four methods — one for each of the HTTP endpoints::
+      This includes the following methods: do_GET, do_POST, do_PUT, or do_DELETE
+    """
+
+# This helper method is used to structure and send JSON responses back to the client.
+    def send_json_response(self, status_code, data):
+        """Send a JSON response with the given status code and data."""
+
+        self.send_response(status_code)
+
+        self.send_header("Content-Type", "application/json")
+
+        self.end_headers()
+
+        self.wfile.write(json.dumps(data, indent=2).encode("utf-8"))
+
+# This helper method is used to read the JSON body from incoming POST and PUT requests, parse it, and return it as a Python dictionary.
+    def read_body(self):
+        """Read and parse the JSON body from the request."""
+
+        content_length = int(self.headers.get("Content-Length", 0))
+        body_bytes = self.rfile.read(content_length)
+        body_string = body_bytes.decode("utf-8")
+        return json.loads(body_string)
+    
+# This helper method is used to extract the numeric ID from the URL path for endpoints that include an ID parameter (e.g., /transactions/5). It returns the ID as an integer or None if the path doesn't contain a valid ID.
+    def get_id_from_path(self):
+        """
+        Extract the numeric ID from the URL path.
+        /transactions/5 → returns 5
+        /transactions   → returns None
+        """
+        parts = self.path.strip("/").split("/")
+
+        if len(parts) == 2 and parts[1].isdigit():
+            return int(parts[1])
+
+        return None
+# This helper method is used to search through the transactions list for a transaction with a specific ID. It returns the transaction dictionary if found or None if no transaction with that ID exists.
+    def find_transaction(self, transaction_id):
+        """Search the transactions list for one with the given ID."""
+
+        for transaction in transactions:
+            if transaction["id"] == transaction_id:
+                return transaction
+
+        return None
+#    The following methods handle the different HTTP endpoints (GET, POST, PUT, DELETE) and implement the logic for each endpoint.
+    def do_GET(self):
+        """Handle GET requests — reading/fetching data."""
+
+        if not check_auth(self.headers):
+            self.send_json_response(401, {"error": "Unauthorized. Valid credentials required."})
+            return  # Stop here — don't serve food to unauthorized people
+
+        if self.path == "/transactions" or self.path == "/transactions/":
+            self.send_json_response(200, transactions)
+
+        elif self.path.startswith("/transactions/"):
+            transaction_id = self.get_id_from_path()
+
+            if transaction_id is None:
+                self.send_json_response(400, {"error": "Invalid transaction ID. Must be a number."})
+                return
+
+            transaction = self.find_transaction(transaction_id)
+
+            if transaction is not None:
+                self.send_json_response(200, transaction)
+            else:
+                self.send_json_response(404, {"error": f"Transaction {transaction_id} not found."})
+
+        else:
+            self.send_json_response(404, {"error": "Endpoint not found. Try /transactions"})
+
+
+# TODO: Implement the POST method here(SUCCESS)
+#   def do_POST(self):
