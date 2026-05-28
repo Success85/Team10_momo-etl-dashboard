@@ -12,7 +12,8 @@ import mysql.connector
 Database_config = {
     "host": "localhost",
     "user": "root", 
-    "password": ""
+    "password": "Mike211@jubassd",
+    "database": "momo_sms_db"
 }
 
 def connect_to_database():
