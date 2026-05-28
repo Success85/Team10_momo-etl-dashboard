@@ -5,133 +5,26 @@ import json
 
 import base64
 
-# TODO: Will replace this with a real database later. For now, it's just a list of dictionaries for testing.
-transactions = [
-    {
-        "id": 1,
-        "external_tx_id": "76662021700",
-        "category": "Incoming Money",
-        "amount": 2000.00,
-        "fee": 0.00,
-        "balance_after": 2000.00,
-        "transaction_date": "2024-05-10 16:30:51",
-        "status": "completed",
-        "sender": "Jane Smith",
-        "receiver": "Account Owner"
-    },
-    {
-        "id": 2,
-        "external_tx_id": "73214484437",
-        "category": "Merchant Payment",
-        "amount": 1000.00,
-        "fee": 0.00,
-        "balance_after": 1000.00,
-        "transaction_date": "2024-05-10 16:31:39",
-        "status": "completed",
-        "sender": "Account Owner",
-        "receiver": "Jane Smith"
-    },
-    {
-        "id": 3,
-        "external_tx_id": "BANK_DEP_001",
-        "category": "Bank Deposit",
-        "amount": 40000.00,
-        "fee": 0.00,
-        "balance_after": 40400.00,
-        "transaction_date": "2024-05-11 18:43:49",
-        "status": "completed",
-        "sender": "MTN Bank",
-        "receiver": "Account Owner"
-    },
-    {
-        "id": 4,
-        "external_tx_id": "17818959211",
-        "category": "Merchant Payment",
-        "amount": 2000.00,
-        "fee": 0.00,
-        "balance_after": 38400.00,
-        "transaction_date": "2024-05-11 18:48:42",
-        "status": "completed",
-        "sender": "Account Owner",
-        "receiver": "Samuel Carter"
-    },
-    {
-        "id": 5,
-        "external_tx_id": "MOB_TRF_001",
-        "category": "Mobile Transfer",
-        "amount": 10000.00,
-        "fee": 100.00,
-        "balance_after": 28300.00,
-        "transaction_date": "2024-05-11 20:34:47",
-        "status": "completed",
-        "sender": "Account Owner",
-        "receiver": "Samuel Carter"
-    },
-    {
-        "id": 6,
-        "external_tx_id": "13913173274",
-        "category": "Airtime Purchase",
-        "amount": 2000.00,
-        "fee": 0.00,
-        "balance_after": 25280.00,
-        "transaction_date": "2024-05-12 11:41:28",
-        "status": "completed",
-        "sender": "Account Owner",
-        "receiver": "MTN Airtime"
-    },
-    {
-        "id": 7,
-        "external_tx_id": "45434420466",
-        "category": "Merchant Payment",
-        "amount": 10900.00,
-        "fee": 0.00,
-        "balance_after": 14380.00,
-        "transaction_date": "2024-05-12 13:26:13",
-        "status": "completed",
-        "sender": "Account Owner",
-        "receiver": "Jane Smith"
-    },
-    {
-        "id": 8,
-        "external_tx_id": "82113964658",
-        "category": "Merchant Payment",
-        "amount": 3500.00,
-        "fee": 0.00,
-        "balance_after": 10880.00,
-        "transaction_date": "2024-05-12 13:34:25",
-        "status": "completed",
-        "sender": "Account Owner",
-        "receiver": "Alex Doe"
-    },
-    {
-        "id": 9,
-        "external_tx_id": "26614842768",
-        "category": "Merchant Payment",
-        "amount": 1000.00,
-        "fee": 0.00,
-        "balance_after": 9880.00,
-        "transaction_date": "2024-05-12 17:58:15",
-        "status": "completed",
-        "sender": "Account Owner",
-        "receiver": "Robert Brown"
-    },
-    {
-        "id": 10,
-        "external_tx_id": "70497610538",
-        "category": "Merchant Payment",
-        "amount": 5000.00,
-        "fee": 0.00,
-        "balance_after": 4880.00,
-        "transaction_date": "2024-05-12 18:08:58",
-        "status": "completed",
-        "sender": "Account Owner",
-        "receiver": "Linda Green"
-    }
-]
+import mysql.connector
 
-next_id = 11
+# TODO: We will have to change the database configuration later to connect to our actual database. For now, it's just a placeholder.
+# Also, we will have to create a dotenv file later to store this kind of sensitive information securely.
+Database_config = {
+    "host": "localhost",
+    "user": "root", 
+    "password": ""
+}
 
-
+def connect_to_database():
+    """"We will use this function to make a connection to the MYSQL database."""
+    try:
+        conn = mysql.connector.connect(**Database_config)
+        print("Connected to the database successfully!")
+        return conn
+    except mysql.connector.Error as err:
+        print(f"Error connecting to the database: {err}")
+        return None
+    
 # TODO: For simplicity, we're hardcoding the username and password here. We will have to create a dotenv file later to store this kind of sensitive information securely.
 #Also we will have to change the credentials to something more secure.
 USERNAME = "admin"
@@ -193,7 +86,7 @@ class MoMoHandler(BaseHTTPRequestHandler):
 
         self.end_headers()
 
-        self.wfile.write(json.dumps(data, indent=2).encode("utf-8"))
+        self.wfile.write(json.dumps(data, indent=2, default=str).encode("utf-8"))
 
 # This helper method is used to read the JSON body from incoming POST and PUT requests, parse it, and return it as a Python dictionary.
     def read_body(self):
@@ -208,8 +101,8 @@ class MoMoHandler(BaseHTTPRequestHandler):
     def get_id_from_path(self):
         """
         Extract the numeric ID from the URL path.
-        /transactions/5 → returns 5
-        /transactions   → returns None
+        /transactions/5 
+        /transactions  
         """
         parts = self.path.strip("/").split("/")
 
@@ -217,15 +110,7 @@ class MoMoHandler(BaseHTTPRequestHandler):
             return int(parts[1])
 
         return None
-# This helper method is used to search through the transactions list for a transaction with a specific ID. It returns the transaction dictionary if found or None if no transaction with that ID exists.
-    def find_transaction(self, transaction_id):
-        """Search the transactions list for one with the given ID."""
 
-        for transaction in transactions:
-            if transaction["id"] == transaction_id:
-                return transaction
-
-        return None
 #    The following methods handle the different HTTP endpoints (GET, POST, PUT, DELETE) and implement the logic for each endpoint.
     def do_GET(self):
         """Handle GET requests - reading/fetching data."""
@@ -235,6 +120,13 @@ class MoMoHandler(BaseHTTPRequestHandler):
             return  
 
         if self.path == "/transactions" or self.path == "/transactions/":
+            conn = connect_to_database()
+        
+            cursor = conn.cursor(dictionary=True)
+            cursor.execute("SELECT * FROM transactions")
+            transactions = cursor.fetchall()
+            cursor.close()
+            conn.close()
             self.send_json_response(200, transactions)
 
         elif self.path.startswith("/transactions/"):
@@ -244,9 +136,14 @@ class MoMoHandler(BaseHTTPRequestHandler):
                 self.send_json_response(400, {"error": "Invalid transaction ID. Must be a number."})
                 return
 
-            transaction = self.find_transaction(transaction_id)
-
+            conn = connect_to_database()
+            cursor = conn.cursor(dictionary=True)
+            cursor.execute("SELECT * FROM transactions WHERE transaction_id = %s", (transaction_id,))
+            transaction = cursor.fetchone()
+            cursor.close()
+            conn.close()
             if transaction is not None:
+
                 self.send_json_response(200, transaction)
             else:
                 self.send_json_response(404, {"error": f"Transaction {transaction_id} not found."})
@@ -268,29 +165,44 @@ class MoMoHandler(BaseHTTPRequestHandler):
             self.send_json_response(400, {"error": "Please provide a transaction ID. Example: /transactions/5"})
             return
 
-        transaction = self.find_transaction(transaction_id)
-
-        if transaction is None:
-            self.send_json_response(404, {"error": f"Transaction {transaction_id} not found."})
-            return
 
         try:
             body = self.read_body()
 
-            for key in body:
-                if key != "id":
-                    transaction[key] = body[key]
+            allowed_fields = {"external_tx_id", "amount", "fee", "transaction_date", "status", "notes", "balance_after"}
 
+            update_field = []
+            value = []
+            for key in allowed_fields:
+                if key in body:
+                    update_field.append(f"{key} = %s")
+                    value.append(body[key])
+            if not update_field:
+                self.send_json_response(400, {"error": "No valid fields to update. Allowed fields: external_tx_id, amount, fee, transaction_date, status, notes, balance_after."})
+                return
+            value.append(transaction_id)
+            conn = connect_to_database()
+            cursor = conn.cursor()
+            cursor.execute(f"UPDATE transactions SET {', '.join(update_field)} WHERE transaction_id = %s", tuple(value))
+            if cursor.rowcount == 0:
+                conn.commit()
+                cursor.close()
+                conn.close()
+                self.send_json_response(404, {"error": f"Transaction {transaction_id} not found."})
+                return
+            conn.commit()
+            cursor.close()
+            conn.close()
             self.send_json_response(200, {
-                "message": "Transaction updated successfully.",
-                "transaction": transaction
+                "message": f"Transaction {transaction_id} updated successfully.",
+                "updated_fields": update_field
             })
 
         except Exception as e:
             self.send_json_response(400, {"error": f"Bad request: {str(e)}"})
 
     def do_DELETE(self):
-        """Handle DELETE requests - removing data."""
+        """Handle DELETE requests - removing data/transaction."""
 
         if not check_auth(self.headers):
             self.send_json_response(401, {"error": "Unauthorized. Valid credentials required."})
@@ -302,13 +214,20 @@ class MoMoHandler(BaseHTTPRequestHandler):
             self.send_json_response(400, {"error": "Please provide a transaction ID. Example: /transactions/5"})
             return
 
-        transaction = self.find_transaction(transaction_id)
-
-        if transaction is None:
+        
+        conn = connect_to_database()
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM transactions WHERE transaction_id = %s", (transaction_id,))
+        if cursor.rowcount == 0:
+            cursor.close()
+            conn.close()
+            conn.close()
             self.send_json_response(404, {"error": f"Transaction {transaction_id} not found."})
             return
 
-        transactions.remove(transaction)
+        conn.commit()
+        cursor.close()
+        conn.close()
 
         self.send_json_response(200, {
             "message": f"Transaction {transaction_id} deleted successfully."
@@ -338,6 +257,15 @@ class MoMoHandler(BaseHTTPRequestHandler):
 # This is the entry point of the application. It sets up and starts the HTTP server.
 # Its for  local testing.
 if __name__ == "__main__":
+    try:
+        conn = connect_to_database()
+        if conn is None:
+            print("Failed to connect to the database. Exiting.")
+            exit(1)
+        conn.close()
+    except Exception as e:
+        print(f"Error during database connection test: {e}")
+        exit(1)
     server_address = ("localhost", 8000)
 
     server = HTTPServer(server_address, MoMoHandler)
