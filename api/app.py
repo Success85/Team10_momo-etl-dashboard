@@ -317,6 +317,7 @@ class MoMoHandler(BaseHTTPRequestHandler):
 
 # TODO: Implement the POST method here(SUCCESS)  
 #  This method will handle the creation of new transactions
+def do_POST(self):
         """Handle POST requests - creating new transactions."""
  
         if not check_auth(self.headers):
@@ -328,6 +329,7 @@ class MoMoHandler(BaseHTTPRequestHandler):
         except Exception as e:
             self.send_json_response(400, {"error": f"Invalid JSON body: {str(e)}"})
             return
+
 
 
 
