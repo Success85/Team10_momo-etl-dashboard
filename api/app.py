@@ -234,17 +234,19 @@ class MoMoHandler(BaseHTTPRequestHandler):
         })
 
 
-# TODO: Implement the POST method here(SUCCESS)             (SUCCESS)             (SUCCESS)             (SUCCESS)             (SUCCESS)             (SUCCESS)             (SUCCESS
-#   def do_POST(self):
-    #  """Handle POST requests - creating new data."""
-
-    # Add code here to handle POST requests for creating new transactions. This will involve reading the JSON body, validating the data, assigning a new ID, and adding the transaction to the list. Don't forget to check authentication and send appropriate responses for success and error cases.
-
-
-
-
-
-
+# TODO: Implement the POST method here(SUCCESS)  
+#  This method will handle the creation of new transactions
+        """Handle POST requests - creating new transactions."""
+ 
+        if not check_auth(self.headers):
+            self.send_json_response(401, {"error": "Unauthorized. Valid credentials required."})
+            return
+ 
+        try:
+            body = self.read_body()
+        except Exception as e:
+            self.send_json_response(400, {"error": f"Invalid JSON body: {str(e)}"})
+            return
 
 
 

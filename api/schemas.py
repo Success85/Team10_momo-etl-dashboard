@@ -32,7 +32,7 @@ VALID_TRANSACTION_TYPES = [
 # Required fields for creating a transaction
 REQUIRED_FIELDS = ["amount", "transaction_type", "sender"]
 
-# Function to validate transaction data before creating or updating a transaction
+# Validate transaction data before creating or updating a transaction
 def validate_transaction(data):
     errors = []
 
