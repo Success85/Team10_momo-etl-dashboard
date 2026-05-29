@@ -1,15 +1,13 @@
 import xml.etree.ElementTree as ET
 
 
-
-def load_sms_xml(xml_file_path):
+def load_sms_xml(xml_file_path: str) -> list[dict]:
     tree = ET.parse(xml_file_path)
     root = tree.getroot()
 
     sms_list = []
 
     for sms in root.findall("sms"):
-
         sms_data = {
             "protocol": sms.get("protocol"),
             "address": sms.get("address"),
@@ -26,7 +24,7 @@ def load_sms_xml(xml_file_path):
             "readable_date": sms.get("readable_date"),
             "status": sms.get("status"),
             "locked": sms.get("locked"),
-            "contact_name": sms.get("contact_name")
+            "contact_name": sms.get("contact_name"),
         }
 
         sms_list.append(sms_data)

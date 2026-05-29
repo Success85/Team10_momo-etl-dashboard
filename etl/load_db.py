@@ -9,8 +9,8 @@ if str(ROOT_DIR) not in sys.path:
     sys.path.append(str(ROOT_DIR))
 
 from api.db import get_connection, init_db
-from sms_parser import parse_sms
-from xml_to_json import load_sms_xml
+from clean_normilize import parse_sms
+from parse_xml import load_sms_xml
 
 
 ACCOUNT_OWNER_NAME = "Account Owner"
