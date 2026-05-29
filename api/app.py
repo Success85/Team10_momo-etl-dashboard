@@ -5,7 +5,29 @@ import json
 
 import base64
 
+<<<<<<< HEAD
 from db import get_connection, init_db
+=======
+import mysql.connector
+
+# TODO: We will have to change the database configuration later to connect to our actual database. For now, it's just a placeholder.
+# Also, we will have to create a dotenv file later to store this kind of sensitive information securely.
+Database_config = {
+    "host": "localhost",
+    "user": "root", 
+    "password": ""
+}
+
+def connect_to_database():
+    """"We will use this function to make a connection to the MYSQL database."""
+    try:
+        conn = mysql.connector.connect(**Database_config)
+        print("Connected to the database successfully!")
+        return conn
+    except mysql.connector.Error as err:
+        print(f"Error connecting to the database: {err}")
+        return None
+>>>>>>> ea58c5a41b87e87b78090e99c478d70fc2884c79
     
 # TODO: For simplicity, we're hardcoding the username and password here. We will have to create a dotenv file later to store this kind of sensitive information securely.
 #Also we will have to change the credentials to something more secure.
@@ -102,8 +124,14 @@ class MoMoHandler(BaseHTTPRequestHandler):
             return  
 
         if self.path == "/transactions" or self.path == "/transactions/":
+<<<<<<< HEAD
             conn = get_connection()
             cursor = conn.cursor()
+=======
+            conn = connect_to_database()
+        
+            cursor = conn.cursor(dictionary=True)
+>>>>>>> ea58c5a41b87e87b78090e99c478d70fc2884c79
             cursor.execute("SELECT * FROM transactions")
             transactions = [dict(row) for row in cursor.fetchall()]
             cursor.close()
@@ -117,14 +145,25 @@ class MoMoHandler(BaseHTTPRequestHandler):
                 self.send_json_response(400, {"error": "Invalid transaction ID. Must be a number."})
                 return
 
+<<<<<<< HEAD
             conn = get_connection()
             cursor = conn.cursor()
             cursor.execute("SELECT * FROM transactions WHERE id = ?", (transaction_id,))
+=======
+            conn = connect_to_database()
+            cursor = conn.cursor(dictionary=True)
+            cursor.execute("SELECT * FROM transactions WHERE transaction_id = %s", (transaction_id,))
+>>>>>>> ea58c5a41b87e87b78090e99c478d70fc2884c79
             transaction = cursor.fetchone()
             cursor.close()
             conn.close()
             if transaction is not None:
+<<<<<<< HEAD
                 self.send_json_response(200, dict(transaction))
+=======
+
+                self.send_json_response(200, transaction)
+>>>>>>> ea58c5a41b87e87b78090e99c478d70fc2884c79
             else:
                 self.send_json_response(404, {"error": f"Transaction {transaction_id} not found."})
 
@@ -213,6 +252,7 @@ class MoMoHandler(BaseHTTPRequestHandler):
             "message": f"Transaction {transaction_id} deleted successfully."
         })
 
+<<<<<<< HEAD
 
 # TODO: Implement the POST method here(SUCCESS)             (SUCCESS)             (SUCCESS)             (SUCCESS)             (SUCCESS)             (SUCCESS)             (SUCCESS
 #   def do_POST(self):
@@ -220,11 +260,138 @@ class MoMoHandler(BaseHTTPRequestHandler):
 
     # Add code here to handle POST requests for creating new transactions. This will involve reading the JSON body, validating the data, assigning a new ID, and adding the transaction to the list. Don't forget to check authentication and send appropriate responses for success and error cases.
     
+=======
+# The following method handles the POST endpoint for creating new transactions. 
+def do_POST(self):
+        """Handle POST requests - creating new transactions."""
+ 
+        if not check_auth(self.headers):
+            self.send_json_response(401, {"error": "Unauthorized. Valid credentials required."})
+            return
+ 
+        try:
+            body = self.read_body()
+        except Exception as e:
+            self.send_json_response(400, {"error": f"Invalid JSON body: {str(e)}"})
+            return
+ 
 
+def do_POST(self):
+        """Handle POST requests - creating new transactions."""
+>>>>>>> ea58c5a41b87e87b78090e99c478d70fc2884c79
 
+        if not check_auth(self.headers):
+            self.send_json_response(401, {"error": "Unauthorized. Valid credentials required."})
+            return
 
+        try:
+            body = self.read_body()
+        except Exception as e:
+            self.send_json_response(400, {"error": f"Invalid JSON body: {str(e)}"})
+            return
 
+        errors = validate_transaction(body)
+        if errors:
+            self.send_json_response(400, {"errors": errors})
+            return
 
+        transaction_type = body["transaction_type"]
+        amount           = float(body["amount"])
+        fee              = float(body.get("fee", 0.0))
+        sender           = body["sender"]
+        receiver         = body.get("receiver", None)
+        balance_after    = body.get("balance_after", None)
+        transaction_date = body.get("transaction_date", None)
+        status           = body.get("status", "completed")
+        notes            = body.get("notes", None)
+        internal_tx_id   = body.get("internal_tx_id", None)
+        external_tx_id   = body.get("external_tx_id", None)
+        raw_body         = body.get("raw_body", None)
+
+<<<<<<< HEAD
+=======
+def do_POST(self):
+        """Handle POST requests - creating new transactions."""
+
+        if not check_auth(self.headers):
+            self.send_json_response(401, {"error": "Unauthorized. Valid credentials required."})
+            return
+
+        try:
+            body = self.read_body()
+        except Exception as e:
+            self.send_json_response(400, {"error": f"Invalid JSON body: {str(e)}"})
+            return
+
+        errors = validate_transaction(body)
+        if errors:
+            self.send_json_response(400, {"errors": errors})
+            return
+
+        transaction_type = body["transaction_type"]
+        amount           = float(body["amount"])
+        fee              = float(body.get("fee", 0.0))
+        sender           = body["sender"]
+        receiver         = body.get("receiver", None)
+        balance_after    = float(body["balance_after"]) if body.get("balance_after") is not None else None
+        transaction_date = body.get("transaction_date", None)
+        status           = body.get("status", "completed")
+        notes            = body.get("notes", None)
+        internal_tx_id   = body.get("internal_tx_id", None)
+        external_tx_id   = body.get("external_tx_id", None)
+        raw_body         = body.get("raw_body", None)
+
+        try:
+            conn   = get_connection()
+            cursor = conn.cursor()
+
+            # look up category_id from transaction_type code
+            cursor.execute(
+                "SELECT category_id FROM transaction_categories WHERE category_code = ?",
+                (transaction_type,)
+            )
+            category_row = cursor.fetchone()
+            category_id  = category_row["category_id"] if category_row else None
+
+            cursor.execute("""
+                INSERT INTO transactions (
+                    transaction_type, internal_tx_id, external_tx_id,
+                    category_id, sender, receiver, amount, fee,
+                    balance_after, transaction_date, status, notes, raw_body
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                transaction_type, internal_tx_id, external_tx_id,
+                category_id, sender, receiver, amount, fee,
+                balance_after, transaction_date, status, notes, raw_body
+            ))
+
+            conn.commit()
+            new_id = cursor.lastrowid
+            conn.close()
+
+            self.send_json_response(201, {
+                "message": "Transaction created successfully.",
+                "transaction": {
+                    "id":               new_id,
+                    "transaction_type": transaction_type,
+                    "internal_tx_id":   internal_tx_id,
+                    "external_tx_id":   external_tx_id,
+                    "category_id":      category_id,
+                    "sender":           sender,
+                    "receiver":         receiver,
+                    "amount":           amount,
+                    "fee":              fee,
+                    "balance_after":    balance_after,
+                    "transaction_date": transaction_date,
+                    "status":           status,
+                    "notes":            notes
+                }
+            })
+
+        except Exception as e:
+            self.send_json_response(500, {"error": f"Database error: {str(e)}"})
+
+>>>>>>> ea58c5a41b87e87b78090e99c478d70fc2884c79
 
 
 
@@ -237,7 +404,19 @@ class MoMoHandler(BaseHTTPRequestHandler):
 # This is the entry point of the application. It sets up and starts the HTTP server.
 # Its for  local testing.
 if __name__ == "__main__":
+<<<<<<< HEAD
     init_db()
+=======
+    try:
+        conn = connect_to_database()
+        if conn is None:
+            print("Failed to connect to the database. Exiting.")
+            exit(1)
+        conn.close()
+    except Exception as e:
+        print(f"Error during database connection test: {e}")
+        exit(1)
+>>>>>>> ea58c5a41b87e87b78090e99c478d70fc2884c79
     server_address = ("localhost", 8000)
 
     server = HTTPServer(server_address, MoMoHandler)
