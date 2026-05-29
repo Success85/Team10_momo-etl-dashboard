@@ -1,27 +1,35 @@
 import json
+import logging
+import sys
 from datetime import datetime
 from pathlib import Path
 
-import pymysql
+ROOT_DIR = Path(__file__).resolve().parents[1]
+if str(ROOT_DIR) not in sys.path:
+    sys.path.append(str(ROOT_DIR))
 
-from sms_parser import parse_sms
-from xml_to_json import load_sms_xml
+from api.db import get_connection, init_db
+from clean_normilize import parse_sms
+from parse_xml import load_sms_xml
 
 
 ACCOUNT_OWNER_NAME = "Account Owner"
 
 
-def open_db_connection(host: str, user: str, password: str, database: str, port: int = 3306) -> pymysql.Connection:
-    return pymysql.connect(
-        host=host,
-        user=user,
-        password=password,
-        database=database,
-        port=port,
-        autocommit=False,
-        charset="utf8mb4",
-        cursorclass=pymysql.cursors.Cursor,
-    )
+def setup_file_logger(log_path: str) -> logging.Logger:
+    Path(log_path).parent.mkdir(parents=True, exist_ok=True)
+    logger = logging.getLogger("etl_logger")
+    logger.setLevel(logging.INFO)
+    logger.propagate = False
+
+    has_file_handler = any(isinstance(handler, logging.FileHandler) for handler in logger.handlers)
+    if not has_file_handler:
+        file_handler = logging.FileHandler(log_path, encoding="utf-8")
+        formatter = logging.Formatter("%(asctime)s %(levelname)s %(message)s")
+        file_handler.setFormatter(formatter)
+        logger.addHandler(file_handler)
+
+    return logger
 
 
 def parse_human_datetime(date_text: str | None) -> datetime | None:
@@ -57,17 +65,6 @@ def normalize_participant_name(raw_name: str | None) -> str | None:
     return cleaned_name
 
 
-def derive_user_type(full_name: str, role: str, category_code: str) -> str:
-    lowered = full_name.lower()
-    if full_name == ACCOUNT_OWNER_NAME:
-        return "account_holder"
-    if "bank" in lowered:
-        return "bank"
-    if role == "receiver" and category_code in {"MERCHANT_PAY", "AIRTIME", "UTILITY"}:
-        return "merchant"
-    return "counterparty"
-
-
 def is_unknown_participant(full_name: str | None) -> bool:
     if not full_name:
         return True
@@ -85,173 +82,158 @@ def build_transaction_notes(parsed_sms: dict) -> str | None:
     return cleaned_note[:500]
 
 
-def get_or_create_user_id(db_conn: pymysql.Connection, full_name: str, user_kind: str) -> int:
-    with db_conn.cursor() as cursor:
-        cursor.execute(
-            "SELECT user_id FROM users WHERE full_name = %s AND user_type = %s",
-            (full_name, user_kind),
-        )
-        row = cursor.fetchone()
-        if row:
-            return row[0]
-        cursor.execute(
-            "INSERT INTO users (full_name, user_type) VALUES (%s, %s)",
-            (full_name, user_kind),
-        )
-        return cursor.lastrowid
+def derive_status(raw_sms: str | None) -> str:
+    if not raw_sms:
+        return "completed"
+    lowered = raw_sms.lower()
+    if "reversed" in lowered:
+        return "reversed"
+    if "failed" in lowered:
+        return "failed"
+    return "completed"
 
 
-def ensure_sms_record(db_conn: pymysql.Connection, sms_record: dict) -> int:
-    with db_conn.cursor() as cursor:
-        cursor.execute(
-            """
-            SELECT sms_id FROM sms_messages
-            WHERE date_received = %s AND body = %s AND address = %s
-            """,
-            (sms_record.get("date"), sms_record.get("body"), sms_record.get("address")),
-        )
-        row = cursor.fetchone()
-        if row:
-            return row[0]
+def ensure_sms_record(db_conn, sms_record: dict) -> int:
+    cursor = db_conn.cursor()
+    cursor.execute(
+        """
+        SELECT sms_id FROM sms_messages
+        WHERE date_received = ? AND body = ? AND address = ?
+        """,
+        (sms_record.get("date"), sms_record.get("body"), sms_record.get("address")),
+    )
+    row = cursor.fetchone()
+    if row:
+        return row[0]
 
-        cursor.execute(
-            """
-            INSERT INTO sms_messages (
-                protocol, address, date_received, date_sent, body, service_center,
-                read_status, sub_id, readable_date, is_processed
-            )
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, 0)
-            """,
-            (
-                int(sms_record.get("protocol") or 0),
-                sms_record.get("address") or "M-Money",
-                int(sms_record.get("date") or 0),
-                int(sms_record.get("date_sent") or 0) if sms_record.get("date_sent") else None,
-                sms_record.get("body") or "",
-                sms_record.get("service_center"),
-                int(sms_record.get("read") or 0),
-                int(sms_record.get("sub_id") or 0) if sms_record.get("sub_id") else None,
-                sms_record.get("readable_date"),
-            ),
+    cursor.execute(
+        """
+        INSERT INTO sms_messages (
+            protocol, address, date_received, date_sent, body, service_center,
+            read_status, sub_id, readable_date, is_processed, is_transaction
         )
-        return cursor.lastrowid
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 1)
+        """,
+        (
+            int(sms_record.get("protocol") or 0),
+            sms_record.get("address") or "M-Money",
+            int(sms_record.get("date") or 0),
+            int(sms_record.get("date_sent") or 0) if sms_record.get("date_sent") else None,
+            sms_record.get("body") or "",
+            sms_record.get("service_center"),
+            int(sms_record.get("read") or 0),
+            int(sms_record.get("sub_id") or 0) if sms_record.get("sub_id") else None,
+            sms_record.get("readable_date"),
+        ),
+    )
+    return cursor.lastrowid
 
 
-def fetch_category_id(db_conn: pymysql.Connection, category_code: str) -> int | None:
-    with db_conn.cursor() as cursor:
-        cursor.execute(
-            "SELECT category_id FROM transaction_categories WHERE category_code = %s",
-            (category_code,),
-        )
-        row = cursor.fetchone()
-        if row:
-            return row[0]
-        return None
+def update_sms_transaction_flag(db_conn, sms_record_id: int, is_transaction: int) -> None:
+    cursor = db_conn.cursor()
+    cursor.execute(
+        "UPDATE sms_messages SET is_transaction = ? WHERE sms_id = ?",
+        (is_transaction, sms_record_id),
+    )
+
+
+def fetch_category_id(db_conn, category_code: str) -> int | None:
+    cursor = db_conn.cursor()
+    cursor.execute(
+        "SELECT category_id FROM transaction_categories WHERE category_code = ?",
+        (category_code,),
+    )
+    row = cursor.fetchone()
+    if row:
+        return row[0]
+    return None
 
 
 def ensure_transaction_record(
-    db_conn: pymysql.Connection,
+    db_conn,
     parsed_sms: dict,
-    sms_record_id: int,
     transaction_category_id: int,
     transaction_timestamp: str,
 ) -> int | None:
     external_transaction_id = parsed_sms.get("external_tx_id")
-    with db_conn.cursor() as cursor:
-        if external_transaction_id:
-            cursor.execute(
-                "SELECT transaction_id FROM transactions WHERE external_tx_id = %s",
-                (external_transaction_id,),
-            )
-            row = cursor.fetchone()
-            if row:
-                return row[0]
-        else:
-            cursor.execute(
-                "SELECT transaction_id FROM transactions WHERE sms_id = %s",
-                (sms_record_id,),
-            )
-            row = cursor.fetchone()
-            if row:
-                return row[0]
-
+    cursor = db_conn.cursor()
+    if external_transaction_id:
         cursor.execute(
-            """
-            INSERT INTO transactions (
-                external_tx_id, category_id, sms_id, amount, fee, balance_after,
-                transaction_date, status, notes
-            )
-            VALUES (%s, %s, %s, %s, %s, %s, %s, 'completed', %s)
-            """,
-            (
-                external_transaction_id,
-                transaction_category_id,
-                sms_record_id,
-                parsed_sms.get("amount") or 0.0,
-                parsed_sms.get("fee") or 0.0,
-                parsed_sms.get("balance_after") or 0.0,
-                transaction_timestamp,
-                build_transaction_notes(parsed_sms),
-            ),
+            "SELECT id FROM transactions WHERE external_tx_id = ?",
+            (external_transaction_id,),
         )
-        return cursor.lastrowid
+        row = cursor.fetchone()
+        if row:
+            return row[0]
 
+    sender_name = normalize_participant_name(parsed_sms.get("sender"))
+    receiver_name = normalize_participant_name(parsed_sms.get("receiver"))
 
-def link_transaction_participant(
-    db_conn: pymysql.Connection,
-    transaction_record_id: int,
-    full_name: str,
-    user_kind: str,
-    participant_role: str,
-) -> None:
-    participant_user_id = get_or_create_user_id(db_conn, full_name, user_kind)
-    with db_conn.cursor() as cursor:
-        cursor.execute(
-            """
-            INSERT IGNORE INTO transaction_participants (transaction_id, user_id, role)
-            VALUES (%s, %s, %s)
-            """,
-            (transaction_record_id, participant_user_id, participant_role),
+    cursor.execute(
+        """
+        INSERT INTO transactions (
+            transaction_type, internal_tx_id, external_tx_id, category_id, sender, receiver,
+            amount, fee, balance_after, transaction_date, status, notes, raw_body
         )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            parsed_sms.get("category_code") or "UNKNOWN",
+            None,
+            external_transaction_id,
+            transaction_category_id,
+            None if is_unknown_participant(sender_name) else sender_name,
+            None if is_unknown_participant(receiver_name) else receiver_name,
+            parsed_sms.get("amount") or 0.0,
+            parsed_sms.get("fee") or 0.0,
+            parsed_sms.get("balance_after"),
+            transaction_timestamp,
+            derive_status(parsed_sms.get("raw_sms")),
+            build_transaction_notes(parsed_sms),
+            parsed_sms.get("raw_sms"),
+        ),
+    )
+    return cursor.lastrowid
 
 
 def record_log_event(
-    db_conn: pymysql.Connection,
+    db_conn,
     event_type: str,
     log_message: str,
     log_level: str = "INFO",
     sms_record_id: int | None = None,
     transaction_record_id: int | None = None,
 ) -> None:
-    with db_conn.cursor() as cursor:
-        cursor.execute(
-            """
-            INSERT INTO system_logs (transaction_id, sms_id, log_level, event_type, message)
-            VALUES (%s, %s, %s, %s, %s)
-            """,
-            (transaction_record_id, sms_record_id, log_level, event_type, log_message),
-        )
+    cursor = db_conn.cursor()
+    cursor.execute(
+        """
+        INSERT INTO system_logs (transaction_id, sms_id, log_level, event_type, message)
+        VALUES (?, ?, ?, ?, ?)
+        """,
+        (transaction_record_id, sms_record_id, log_level, event_type, log_message),
+    )
 
 
-def mark_sms_as_processed(db_conn: pymysql.Connection, sms_record_id: int) -> None:
-    with db_conn.cursor() as cursor:
-        cursor.execute(
-            "UPDATE sms_messages SET is_processed = 1 WHERE sms_id = %s",
-            (sms_record_id,),
-        )
+def mark_sms_as_processed(db_conn, sms_record_id: int) -> None:
+    cursor = db_conn.cursor()
+    cursor.execute(
+        "UPDATE sms_messages SET is_processed = 1 WHERE sms_id = ?",
+        (sms_record_id,),
+    )
 
 
 def import_sms_to_database(
     xml_path: str,
-    host: str,
-    user: str,
-    password: str,
-    database: str,
-    port: int = 3306,
     output_path: str = "data/processed/dashboard.json",
     batch_size: int = 200,
+    log_path: str = "data/logs/etl.log",
+    initialize_db: bool = True,
 ) -> dict:
-    db_conn = open_db_connection(host=host, user=user, password=password, database=database, port=port)
+    logger = setup_file_logger(log_path)
+    if initialize_db:
+        init_db()
+
+    db_conn = get_connection()
     sms_records = load_sms_xml(xml_path)
     import_summary = {
         "total_sms": len(sms_records),
@@ -272,14 +254,14 @@ def import_sms_to_database(
         batch_size = 1
 
     try:
+        logger.info("XML import started. Total SMS records: %s", len(sms_records))
         record_log_event(db_conn, "IMPORT", f"XML import started. Total SMS records: {len(sms_records)}.")
         db_conn.commit()
 
         for sms_index, sms_record in enumerate(sms_records, start=1):
             sms_record_id = None
             savepoint_name = f"sms_{sms_index}"
-            with db_conn.cursor() as cursor:
-                cursor.execute(f"SAVEPOINT {savepoint_name}")
+            db_conn.execute(f"SAVEPOINT {savepoint_name}")
             try:
                 sms_record_id = ensure_sms_record(db_conn, sms_record)
                 parsed_sms = parse_sms(sms_record)
@@ -296,6 +278,8 @@ def import_sms_to_database(
                 transaction_category_code = parsed_sms.get("category_code") or "UNKNOWN"
                 if transaction_category_code == "UNKNOWN":
                     batch_summary["skipped_unknown"] += 1
+                    update_sms_transaction_flag(db_conn, sms_record_id, 0)
+                    logger.warning("sms_id=%s unrecognized transaction type", sms_record_id)
                     record_log_event(
                         db_conn,
                         "PARSE",
@@ -303,14 +287,19 @@ def import_sms_to_database(
                         log_level="WARNING",
                         sms_record_id=sms_record_id,
                     )
-                    with db_conn.cursor() as cursor:
-                        cursor.execute(f"RELEASE SAVEPOINT {savepoint_name}")
+                    db_conn.execute(f"RELEASE SAVEPOINT {savepoint_name}")
                     processed_in_batch += 1
                     continue
 
                 transaction_category_id = fetch_category_id(db_conn, transaction_category_code)
                 if transaction_category_id is None:
                     batch_summary["skipped_unknown"] += 1
+                    update_sms_transaction_flag(db_conn, sms_record_id, 0)
+                    logger.warning(
+                        "sms_id=%s category code missing in DB: %s",
+                        sms_record_id,
+                        transaction_category_code,
+                    )
                     record_log_event(
                         db_conn,
                         "PARSE",
@@ -318,13 +307,14 @@ def import_sms_to_database(
                         log_level="WARNING",
                         sms_record_id=sms_record_id,
                     )
-                    with db_conn.cursor() as cursor:
-                        cursor.execute(f"RELEASE SAVEPOINT {savepoint_name}")
+                    db_conn.execute(f"RELEASE SAVEPOINT {savepoint_name}")
                     processed_in_batch += 1
                     continue
 
                 if (parsed_sms.get("amount") or 0.0) <= 0:
                     batch_summary["skipped_invalid"] += 1
+                    update_sms_transaction_flag(db_conn, sms_record_id, 0)
+                    logger.warning("sms_id=%s transaction amount missing or invalid", sms_record_id)
                     record_log_event(
                         db_conn,
                         "VALIDATE",
@@ -332,14 +322,15 @@ def import_sms_to_database(
                         log_level="WARNING",
                         sms_record_id=sms_record_id,
                     )
-                    with db_conn.cursor() as cursor:
-                        cursor.execute(f"RELEASE SAVEPOINT {savepoint_name}")
+                    db_conn.execute(f"RELEASE SAVEPOINT {savepoint_name}")
                     processed_in_batch += 1
                     continue
 
                 transaction_timestamp = resolve_transaction_timestamp(sms_record, parsed_sms)
                 if not transaction_timestamp:
                     batch_summary["skipped_invalid"] += 1
+                    update_sms_transaction_flag(db_conn, sms_record_id, 0)
+                    logger.warning("sms_id=%s transaction date missing", sms_record_id)
                     record_log_event(
                         db_conn,
                         "VALIDATE",
@@ -347,20 +338,20 @@ def import_sms_to_database(
                         log_level="WARNING",
                         sms_record_id=sms_record_id,
                     )
-                    with db_conn.cursor() as cursor:
-                        cursor.execute(f"RELEASE SAVEPOINT {savepoint_name}")
+                    db_conn.execute(f"RELEASE SAVEPOINT {savepoint_name}")
                     processed_in_batch += 1
                     continue
 
                 transaction_record_id = ensure_transaction_record(
                     db_conn,
                     parsed_sms,
-                    sms_record_id,
                     transaction_category_id,
                     transaction_timestamp,
                 )
                 if transaction_record_id is None:
                     batch_summary["failed"] += 1
+                    update_sms_transaction_flag(db_conn, sms_record_id, 0)
+                    logger.error("sms_id=%s failed to insert transaction", sms_record_id)
                     record_log_event(
                         db_conn,
                         "CRUD",
@@ -368,34 +359,11 @@ def import_sms_to_database(
                         log_level="ERROR",
                         sms_record_id=sms_record_id,
                     )
-                    with db_conn.cursor() as cursor:
-                        cursor.execute(f"RELEASE SAVEPOINT {savepoint_name}")
+                    db_conn.execute(f"RELEASE SAVEPOINT {savepoint_name}")
                     processed_in_batch += 1
                     continue
 
-                sender_name = normalize_participant_name(parsed_sms.get("sender"))
-                receiver_name = normalize_participant_name(parsed_sms.get("receiver"))
-
-                if sender_name and not is_unknown_participant(sender_name):
-                    sender_type = derive_user_type(sender_name, "sender", transaction_category_code)
-                    link_transaction_participant(
-                        db_conn,
-                        transaction_record_id,
-                        sender_name,
-                        sender_type,
-                        "sender",
-                    )
-
-                if receiver_name and not is_unknown_participant(receiver_name):
-                    receiver_type = derive_user_type(receiver_name, "receiver", transaction_category_code)
-                    link_transaction_participant(
-                        db_conn,
-                        transaction_record_id,
-                        receiver_name,
-                        receiver_type,
-                        "receiver",
-                    )
-
+                update_sms_transaction_flag(db_conn, sms_record_id, 1)
                 mark_sms_as_processed(db_conn, sms_record_id)
                 batch_summary["inserted_transactions"] += 1
 
@@ -406,15 +374,19 @@ def import_sms_to_database(
                     sms_record_id=sms_record_id,
                     transaction_record_id=transaction_record_id,
                 )
-                with db_conn.cursor() as cursor:
-                    cursor.execute(f"RELEASE SAVEPOINT {savepoint_name}")
+                logger.info(
+                    "sms_id=%s inserted transaction %s",
+                    sms_record_id,
+                    parsed_sms.get("external_tx_id") or transaction_record_id,
+                )
+                db_conn.execute(f"RELEASE SAVEPOINT {savepoint_name}")
                 processed_in_batch += 1
             except Exception as exc:
-                with db_conn.cursor() as cursor:
-                    cursor.execute(f"ROLLBACK TO SAVEPOINT {savepoint_name}")
-                    cursor.execute(f"RELEASE SAVEPOINT {savepoint_name}")
+                db_conn.execute(f"ROLLBACK TO SAVEPOINT {savepoint_name}")
+                db_conn.execute(f"RELEASE SAVEPOINT {savepoint_name}")
                 batch_summary["failed"] += 1
                 try:
+                    logger.error("sms_id=%s unhandled error: %s", sms_record_id, exc)
                     record_log_event(
                         db_conn,
                         "SYSTEM",
@@ -428,6 +400,14 @@ def import_sms_to_database(
 
             if processed_in_batch >= batch_size:
                 db_conn.commit()
+                logger.info(
+                    "Committed batch size=%s inserted=%s skipped_unknown=%s skipped_invalid=%s failed=%s",
+                    processed_in_batch,
+                    batch_summary["inserted_transactions"],
+                    batch_summary["skipped_unknown"],
+                    batch_summary["skipped_invalid"],
+                    batch_summary["failed"],
+                )
                 for key, value in batch_summary.items():
                     import_summary[key] += value
                 batch_summary = {
@@ -440,9 +420,18 @@ def import_sms_to_database(
 
         if processed_in_batch:
             db_conn.commit()
+            logger.info(
+                "Committed final batch size=%s inserted=%s skipped_unknown=%s skipped_invalid=%s failed=%s",
+                processed_in_batch,
+                batch_summary["inserted_transactions"],
+                batch_summary["skipped_unknown"],
+                batch_summary["skipped_invalid"],
+                batch_summary["failed"],
+            )
             for key, value in batch_summary.items():
                 import_summary[key] += value
 
+        logger.info("Batch processing complete")
         record_log_event(db_conn, "IMPORT", "Batch processing complete.")
         db_conn.commit()
     finally:
@@ -451,5 +440,14 @@ def import_sms_to_database(
     Path(output_path).parent.mkdir(parents=True, exist_ok=True)
     with open(output_path, "w", encoding="utf-8") as file_handle:
         json.dump(parsed_output, file_handle, ensure_ascii=True, indent=2)
+    logger.info("Wrote parsed JSON to %s", output_path)
+    logger.info(
+        "Summary total=%s inserted=%s skipped_unknown=%s skipped_invalid=%s failed=%s",
+        import_summary["total_sms"],
+        import_summary["inserted_transactions"],
+        import_summary["skipped_unknown"],
+        import_summary["skipped_invalid"],
+        import_summary["failed"],
+    )
 
     return import_summary

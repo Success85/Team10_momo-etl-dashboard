@@ -1,6 +1,9 @@
 import re
 
-def parse_sms(sms):
+from categorize import classify_transaction
+
+
+def parse_sms(sms: dict) -> dict:
     body = sms.get("body", "")
 
     result = {
@@ -12,14 +15,15 @@ def parse_sms(sms):
         "sender": None,
         "receiver": None,
         "category_code": classify_transaction(body),
-        "raw_sms": body
+        "raw_sms": body,
     }
 
     result.update(extract_parties(body))
 
     return result
 
-def extract_tx_id(body: str):
+
+def extract_tx_id(body: str) -> str | None:
     match = re.search(r"TxId[: ]\s*(\d+)", body)
     if match:
         return match.group(1)
@@ -30,6 +34,7 @@ def extract_tx_id(body: str):
 
     return None
 
+
 def extract_amount(body: str) -> float:
     match = re.search(r"(\d{1,3}(?:,\d{3})*|\d+)\s*RWF", body)
     if match:
@@ -38,6 +43,7 @@ def extract_amount(body: str) -> float:
     if match:
         return float(match.group(1).replace(",", ""))
     return 0.0
+
 
 def extract_fee(body: str) -> float:
     match = re.search(r"Fee(?: was|:)?\s*(\d{1,3}(?:,\d{3})*|\d+)", body)
@@ -48,57 +54,15 @@ def extract_fee(body: str) -> float:
         return float(match.group(1).replace(",", ""))
     return 0.0
 
+
 def extract_balance(body: str) -> float:
-    
     match = re.search(r"balance[\s:]+(\d+(?:,\d{3})*)", body, re.IGNORECASE)
     if match:
         return float(match.group(1).replace(",", ""))
     return 0.0
 
-def classify_transaction(body: str) -> str:
-    body_lower = body.lower()
 
-    if "you have received" in body_lower:
-        return "INCOMING"
-
-    if "bank deposit" in body_lower:
-        return "BANK_DEP"
-
-    if "deposit" in body_lower:
-        return "CASH_DEP"
-
-    if "airtime" in body_lower or "bundle" in body_lower:
-        return "AIRTIME"
-
-    if "*165*s*" in body_lower:
-        return "MOB_TRANSFER"
-
-    if "you have transferred" in body_lower:
-        return "MOB_TRANSFER"
-
-    if "your transaction to" in body_lower:
-        return "MOB_TRANSFER"
-
-    if "your payment of" in body_lower:
-        if "to " in body_lower:
-            return "MERCHANT_PAY"
-        return "UTILITY"
-
-    if "a transaction of" in body_lower and "on your momo account" in body_lower:
-        return "MERCHANT_PAY"
-
-    if "transaction with amount" in body_lower and " for " in body_lower:
-        return "MERCHANT_PAY"
-
-    if "withdraw" in body_lower:
-        return "WITHDRAWAL"
-
-    return "UNKNOWN"
-
-
-
-
-def extract_parties(text):
+def extract_parties(text: str) -> dict:
     sender = "Unknown Sender"
     receiver = "Unknown Receiver"
 
@@ -141,10 +105,14 @@ def extract_parties(text):
     if result:
         sender = "Self"
         raw_receiver = result.group(1).strip()
-        receiver = re.sub(r'\s+', ' ', raw_receiver) 
+        receiver = re.sub(r"\s+", " ", raw_receiver)
         return {"sender": sender, "receiver": receiver}
 
-    result = re.search(r"transaction with amount .*? for ([A-Za-z0-9\s&'.-]+) with message", text, re.IGNORECASE)
+    result = re.search(
+        r"transaction with amount .*? for ([A-Za-z0-9\s&'.-]+) with message",
+        text,
+        re.IGNORECASE,
+    )
     if result:
         sender = "Self"
         receiver = result.group(1).strip()
@@ -158,7 +126,5 @@ def extract_parties(text):
 
     return {
         "sender": sender,
-        "receiver": receiver
+        "receiver": receiver,
     }
-
-
