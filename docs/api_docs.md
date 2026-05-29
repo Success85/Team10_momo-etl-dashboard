@@ -1,142 +1,297 @@
-API Documentation
+# MoMo Transactions API Documentation
 
-Base URL: http://localhost:8000
-Authentication: Basic Auth — admin / MOMO123
+## Base URL
 
+```txt
+http://localhost:8000
+```
 
-GET /transactions
-Returns all transactions from the database.
+---
 
-Request:
-    curl -u admin:MOMO123 http://localhost:8000/transactions
+## Authentication
 
-Response (200):
+This API uses **Basic Authentication**.
+
+### Credentials
+
+| Username | Password |
+| -------- | -------- |
+| admin    | MOMO123  |
+
+Example:
+
+```bash
+curl -u admin:MOMO123 http://localhost:8000/transactions
+```
+
+---
+
+# Endpoints
+
+---
+
+# GET /transactions
+
+Returns all transactions stored in the database.
+
+## Request
+
+```bash
+curl -u admin:MOMO123 http://localhost:8000/transactions
+```
+
+---
+
+## Successful Response (200 OK)
+
+```json
 [
   {
-    "transaction_id": 1,
-    "external_tx_id": "76662021700",
-    "category_id": 1,
-    "sms_id": 1,
-    "amount": "2000.00",
-    "fee": "0.00",
-    "balance_after": "2000.00",
-    "transaction_date": "2024-05-10 16:30:51",
+    "id": 1610,
+    "transaction_type": "MOB_TRANSFER",
+    "internal_tx_id": null,
+    "external_tx_id": null,
+    "category_id": 4,
+    "sender": null,
+    "receiver": null,
+    "amount": 103000.0,
+    "fee": 250.0,
+    "balance_after": 737.0,
+    "transaction_date": "2025-01-06 13:36:23",
     "status": "completed",
-    "notes": null,
-    "created_at": "2026-05-16 16:57:06",
-    "updated_at": "2026-05-16 16:57:06"
-  },
-  {
-    "transaction_id": 2,
-    "external_tx_id": "73214484437",
-    "category_id": 2,
-    "sms_id": 2,
-    "amount": "1000.00",
-    "fee": "0.00",
-    "balance_after": "1000.00",
-    "transaction_date": "2024-05-10 16:31:39",
-    "status": "completed",
-    "notes": null,
-    "created_at": "2026-05-16 16:57:06",
-    "updated_at": "2026-05-16 16:57:06"
+    "notes": "*165*S*103000 RWF transferred to Samuel Carter...",
+    "raw_body": "*165*S*103000 RWF transferred to Samuel Carter...",
+    "created_at": "2026-05-29 17:07:49",
+    "updated_at": "2026-05-29 17:07:49"
   }
 ]
+```
 
-Error Codes:
-    401 — Unauthorized (missing or wrong credentials)
+---
+
+## Error Responses
+
+| Status Code | Description                                   |
+| ----------- | --------------------------------------------- |
+| 401         | Unauthorized (missing or invalid credentials) |
 
 
-GET /transactions/{id}
+---
+
+# GET /transactions/{id}
+
 Returns a single transaction by ID.
 
-Request:
-    curl -u admin:MOMO123 http://localhost:8000/transactions/1
+## Request
 
-Response (200):
+```bash
+curl -u admin:MOMO123 http://localhost:8000/transactions/1610
+```
+
+---
+
+## Successful Response (200 OK)
+
+```json
 {
-  "transaction_id": 1,
-  "external_tx_id": "76662021700",
-  "category_id": 1,
-  "sms_id": 1,
-  "amount": "2000.00",
-  "fee": "0.00",
-  "balance_after": "2000.00",
-  "transaction_date": "2024-05-10 16:30:51",
+  "id": 1610,
+  "transaction_type": "MOB_TRANSFER",
+  "internal_tx_id": null,
+  "external_tx_id": null,
+  "category_id": 4,
+  "sender": null,
+  "receiver": null,
+  "amount": 103000.0,
+  "fee": 250.0,
+  "balance_after": 737.0,
+  "transaction_date": "2025-01-06 13:36:23",
   "status": "completed",
-  "notes": null,
-  "created_at": "2026-05-16 16:57:06",
-  "updated_at": "2026-05-16 16:57:06"
+  "notes": "*165*S*103000 RWF transferred to Samuel Carter...",
+  "raw_body": "*165*S*103000 RWF transferred to Samuel Carter...",
+  "created_at": "2026-05-29 17:07:49",
+  "updated_at": "2026-05-29 17:07:49"
 }
+```
 
-Error Codes:
-    400 — Invalid ID format
-    401 — Unauthorized
-    404 — Transaction not found
+---
 
+## Error Responses
 
-POST /transactions
+| Status Code | Description            |
+| ----------- | ---------------------- |
+| 400         | Invalid transaction ID |
+| 401         | Unauthorized           |
+| 404         | Transaction not found  |
+
+---
+
+# POST /transactions
+
 Creates a new transaction.
 
-Request:
-    curl -u admin:MOMO123 -X POST http://localhost:8000/transactions -H "Content-Type: application/json" -d "{\"external_tx_id\": \"NEW_TX_001\", \"category\": \"Incoming Money\", \"amount\": 7500.00, \"fee\": 0.00, \"balance_after\": 12380.00, \"transaction_date\": \"2024-05-13 10:00:00\", \"status\": \"completed\"}"
+## Request
 
-Request Body:
+```bash
+curl -u admin:MOMO123 -X POST http://localhost:8000/transactions \
+-H "Content-Type: application/json" \
+-d "{\"transaction_type\":\"MERCHANT_PAY\",\"external_tx_id\":\"90877654321\",\"category_id\":2,\"sender\":\"Account Owner\",\"receiver\":\"Jane Smith\",\"amount\":5000.0,\"fee\":0.0,\"balance_after\":45000.0,\"transaction_date\":\"2025-01-09 14:30:00\",\"status\":\"completed\",\"notes\":\"Transaction completed successfully.\",\"raw_body\":\"Transaction completed successfully.\"}"
+```
+
+---
+
+## Request Body
+
+```json
 {
-  "external_tx_id": "NEW_TX_001",
-  "category": "Incoming Money",
-  "amount": 7500.00,
-  "fee": 0.00,
-  "balance_after": 12380.00,
-  "transaction_date": "2024-05-13 10:00:00",
-  "status": "completed"
+  "transaction_type": "MERCHANT_PAY",
+  "external_tx_id": "90877654321",
+  "category_id": 2,
+  "sender": "Account Owner",
+  "receiver": "Jane Smith",
+  "amount": 5000.0,
+  "fee": 0.0,
+  "balance_after": 45000.0,
+  "transaction_date": "2025-01-09 14:30:00",
+  "status": "completed",
+  "notes": "Transaction completed successfully.",
+  "raw_body": "Transaction completed successfully."
 }
+```
 
-Response (201):
+---
+
+## Successful Response (201 Created)
+
+```json
 {
   "message": "Transaction created successfully.",
-  "transaction_id": 11
+  "transaction_id": 1625
 }
+```
 
-Error Codes:
-    400 — Invalid JSON or unknown category
-    401 — Unauthorized
+---
 
+## Error Responses
 
-PUT /transactions/{id}
-Updates an existing transaction. Only send the fields you want to change.
+| Status Code | Description          |
+| ----------- | -------------------- |
+| 400         | Invalid JSON request |
+| 401         | Unauthorized         |
 
-Request:
-    curl -u admin:MOMO123 -X PUT http://localhost:8000/transactions/1 -H "Content-Type: application/json" -d "{\"status\": \"reversed\", \"notes\": \"Reversed via API\"}"
+---
 
-Request Body:
+# PUT /transactions/{id}
+
+Updates an existing transaction.
+
+Only send the fields you want to modify.
+
+## Request
+
+```bash
+curl -u admin:MOMO123 -X PUT http://localhost:8000/transactions/1610 \
+-H "Content-Type: application/json" \
+-d "{\"status\":\"reversed\",\"notes\":\"Transaction reversed manually.\"}"
+```
+
+---
+
+## Request Body
+
+```json
 {
   "status": "reversed",
-  "notes": "Reversed via API"
+  "notes": "Transaction reversed manually."
 }
+```
 
-Response (200):
+---
+
+## Successful Response (200 OK)
+
+```json
 {
-  "message": "Transaction 1 updated successfully."
+  "message": "Transaction 1610 updated successfully."
 }
+```
 
-Error Codes:
-    400 — No valid fields provided
-    401 — Unauthorized
-    404 — Transaction not found
+---
 
+## Error Responses
 
-DELETE /transactions/{id}
+| Status Code | Description              |
+| ----------- | ------------------------ |
+| 400         | No valid fields provided |
+| 401         | Unauthorized             |
+| 404         | Transaction not found    |
+
+---
+
+# DELETE /transactions/{id}
+
 Deletes a transaction permanently.
 
-Request:
-    curl -u admin:MOMO123 -X DELETE http://localhost:8000/transactions/10
+## Request
 
-Response (200):
+```bash
+curl -u admin:MOMO123 -X DELETE http://localhost:8000/transactions/1610
+```
+
+---
+
+## Successful Response (200 OK)
+
+```json
 {
-  "message": "Transaction 10 deleted successfully."
+  "message": "Transaction 1610 deleted successfully."
 }
+```
 
-Error Codes:
-    400 — Invalid ID format
-    401 — Unauthorized
-    404 — Transaction not found
+---
+
+## Error Responses
+
+| Status Code | Description            |
+| ----------- | ---------------------- |
+| 400         | Invalid transaction ID |
+| 401         | Unauthorized           |
+| 404         | Transaction not found  |
+
+---
+
+# Transaction Fields
+
+| Field            | Type        | Description                       |
+| ---------------- | ----------- | --------------------------------- |
+| id               | Integer     | Unique transaction ID             |
+| transaction_type | String      | Type of transaction               |
+| internal_tx_id   | String/null | Internal transaction reference    |
+| external_tx_id   | String/null | External transaction reference    |
+| category_id      | Integer     | Transaction category              |
+| sender           | String/null | Sender name                       |
+| receiver         | String/null | Receiver name                     |
+| amount           | Float       | Transaction amount                |
+| fee              | Float       | Transaction fee                   |
+| balance_after    | Float       | Account balance after transaction |
+| transaction_date | Datetime    | Date and time of transaction      |
+| status           | String      | Transaction status                |
+| notes            | String      | Additional transaction notes      |
+| raw_body         | String      | Original SMS/raw message          |
+| created_at       | Datetime    | Record creation timestamp         |
+| updated_at       | Datetime    | Record update timestamp           |
+
+---
+
+# Common HTTP Status Codes
+
+| Code | Meaning               |
+| ---- | --------------------- |
+| 200  | OK                    |
+| 201  | Created               |
+| 400  | Bad Request           |
+| 401  | Unauthorized          |
+| 404  | Not Found             |
+| 500  | Internal Server Error |
+
+```
+```
