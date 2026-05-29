@@ -1,0 +1,19 @@
+### Get all transactions
+GET http://localhost:8000/transactions
+Authorization: Basic YWRtaW46TU9NTzEyMw==
+
+### Get one transaction
+GET http://localhost:8000/transactions/1
+Authorization: Basic YWRtaW46TU9NTzEyMw==
+
+### Create a transaction
+POST http://localhost:8000/transactions
+Authorization: Basic YWRtaW46TU9NTzEyMw==
+Content-Type: application/json
+
+{
+  "category": "Incoming Money",
+  "amount": 7500.00,
+  "fee": 0.00,
+  "transaction_date": "2024-05-13 10:00:00"
+}
