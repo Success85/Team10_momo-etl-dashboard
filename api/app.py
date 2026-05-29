@@ -214,49 +214,7 @@ class MoMoHandler(BaseHTTPRequestHandler):
 
 
 #Create the HTTP server and start listening for requests
-def do_POST(self):
-        """Handle POST requests - creating new transactions."""
 
-        if not check_auth(self.headers):
-            self.send_json_response(401, {"error": "Unauthorized. Valid credentials required."})
-            return
-
-        try:
-            body = self.read_body()
-        except Exception as e:
-            self.send_json_response(400, {"error": f"Invalid JSON body: {str(e)}"})
-            return
-        
-def do_POST(self):
-        """Handle POST requests - creating new transactions."""
-
-        if not check_auth(self.headers):
-            self.send_json_response(401, {"error": "Unauthorized. Valid credentials required."})
-            return
-
-        try:
-            body = self.read_body()
-        except Exception as e:
-            self.send_json_response(400, {"error": f"Invalid JSON body: {str(e)}"})
-            return
-
-        errors = validate_transaction(body)
-        if errors:
-            self.send_json_response(400, {"errors": errors})
-            return
-
-        transaction_type = body["transaction_type"]
-        amount           = float(body["amount"])
-        fee              = float(body.get("fee", 0.0))
-        sender           = body["sender"]
-        receiver         = body.get("receiver", None)
-        balance_after    = body.get("balance_after", None)
-        transaction_date = body.get("transaction_date", None)
-        status           = body.get("status", "completed")
-        notes            = body.get("notes", None)
-        internal_tx_id   = body.get("internal_tx_id", None)
-        external_tx_id   = body.get("external_tx_id", None)
-        raw_body         = body.get("raw_body", None)
 
 def do_POST(self):
         """Handle POST requests - creating new transactions."""
