@@ -330,10 +330,119 @@ def do_POST(self):
             self.send_json_response(400, {"error": f"Invalid JSON body: {str(e)}"})
             return
 
+# Validate the incoming data using the validate_transaction function defined in schemas.py
+def do_POST(self):
+        """Handle POST requests - creating new transactions."""
 
+        if not check_auth(self.headers):
+            self.send_json_response(401, {"error": "Unauthorized. Valid credentials required."})
+            return
 
+        try:
+            body = self.read_body()
+        except Exception as e:
+            self.send_json_response(400, {"error": f"Invalid JSON body: {str(e)}"})
+            return
 
+        errors = validate_transaction(body)
+        if errors:
+            self.send_json_response(400, {"errors": errors})
+            return
 
+        transaction_type = body["transaction_type"]
+        amount           = float(body["amount"])
+        fee              = float(body.get("fee", 0.0))
+        sender           = body["sender"]
+        receiver         = body.get("receiver", None)
+        balance_after    = body.get("balance_after", None)
+        transaction_date = body.get("transaction_date", None)
+        status           = body.get("status", "completed")
+        notes            = body.get("notes", None)
+        internal_tx_id   = body.get("internal_tx_id", None)
+        external_tx_id   = body.get("external_tx_id", None)
+        raw_body         = body.get("raw_body", None)
+
+#Create a new transaction record in the database using the validated data
+def do_POST(self):
+        """Handle POST requests - creating new transactions."""
+
+        if not check_auth(self.headers):
+            self.send_json_response(401, {"error": "Unauthorized. Valid credentials required."})
+            return
+
+        try:
+            body = self.read_body()
+        except Exception as e:
+            self.send_json_response(400, {"error": f"Invalid JSON body: {str(e)}"})
+            return
+
+        errors = validate_transaction(body)
+        if errors:
+            self.send_json_response(400, {"errors": errors})
+            return
+
+        transaction_type = body["transaction_type"]
+        amount           = float(body["amount"])
+        fee              = float(body.get("fee", 0.0))
+        sender           = body["sender"]
+        receiver         = body.get("receiver", None)
+        balance_after    = float(body["balance_after"]) if body.get("balance_after") is not None else None
+        transaction_date = body.get("transaction_date", None)
+        status           = body.get("status", "completed")
+        notes            = body.get("notes", None)
+        internal_tx_id   = body.get("internal_tx_id", None)
+        external_tx_id   = body.get("external_tx_id", None)
+        raw_body         = body.get("raw_body", None)
+
+        try:
+            conn   = get_connection()
+            cursor = conn.cursor()
+
+            # look up category_id from transaction_type code
+            cursor.execute(
+                "SELECT category_id FROM transaction_categories WHERE category_code = ?",
+                (transaction_type,)
+            )
+            category_row = cursor.fetchone()
+            category_id  = category_row["category_id"] if category_row else None
+
+            cursor.execute("""
+                INSERT INTO transactions (
+                    transaction_type, internal_tx_id, external_tx_id,
+                    category_id, sender, receiver, amount, fee,
+                    balance_after, transaction_date, status, notes, raw_body
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                transaction_type, internal_tx_id, external_tx_id,
+                category_id, sender, receiver, amount, fee,
+                balance_after, transaction_date, status, notes, raw_body
+            ))
+
+            conn.commit()
+            new_id = cursor.lastrowid
+            conn.close()
+
+            self.send_json_response(201, {
+                "message": "Transaction created successfully.",
+                "transaction": {
+                    "id":               new_id,
+                    "transaction_type": transaction_type,
+                    "internal_tx_id":   internal_tx_id,
+                    "external_tx_id":   external_tx_id,
+                    "category_id":      category_id,
+                    "sender":           sender,
+                    "receiver":         receiver,
+                    "amount":           amount,
+                    "fee":              fee,
+                    "balance_after":    balance_after,
+                    "transaction_date": transaction_date,
+                    "status":           status,
+                    "notes":            notes
+                }
+            })
+
+        except Exception as e:
+            self.send_json_response(500, {"error": f"Database error: {str(e)}"})
 
 
 
