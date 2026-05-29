@@ -5,26 +5,7 @@ import json
 
 import base64
 
-import mysql.connector
-
-# TODO: We will have to change the database configuration later to connect to our actual database. For now, it's just a placeholder.
-# Also, we will have to create a dotenv file later to store this kind of sensitive information securely.
-Database_config = {
-    "host": "localhost",
-    "user": "root", 
-    "password": "Mike211@jubassd",
-    "database": "momo_sms_db"
-}
-
-def connect_to_database():
-    """"We will use this function to make a connection to the MYSQL database."""
-    try:
-        conn = mysql.connector.connect(**Database_config)
-        print("Connected to the database successfully!")
-        return conn
-    except mysql.connector.Error as err:
-        print(f"Error connecting to the database: {err}")
-        return None
+from db import get_connection, init_db
     
 # TODO: For simplicity, we're hardcoding the username and password here. We will have to create a dotenv file later to store this kind of sensitive information securely.
 #Also we will have to change the credentials to something more secure.
@@ -121,11 +102,10 @@ class MoMoHandler(BaseHTTPRequestHandler):
             return  
 
         if self.path == "/transactions" or self.path == "/transactions/":
-            conn = connect_to_database()
-        
-            cursor = conn.cursor(dictionary=True)
+            conn = get_connection()
+            cursor = conn.cursor()
             cursor.execute("SELECT * FROM transactions")
-            transactions = cursor.fetchall()
+            transactions = [dict(row) for row in cursor.fetchall()]
             cursor.close()
             conn.close()
             self.send_json_response(200, transactions)
@@ -137,15 +117,14 @@ class MoMoHandler(BaseHTTPRequestHandler):
                 self.send_json_response(400, {"error": "Invalid transaction ID. Must be a number."})
                 return
 
-            conn = connect_to_database()
-            cursor = conn.cursor(dictionary=True)
-            cursor.execute("SELECT * FROM transactions WHERE transaction_id = %s", (transaction_id,))
+            conn = get_connection()
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM transactions WHERE id = ?", (transaction_id,))
             transaction = cursor.fetchone()
             cursor.close()
             conn.close()
             if transaction is not None:
-
-                self.send_json_response(200, transaction)
+                self.send_json_response(200, dict(transaction))
             else:
                 self.send_json_response(404, {"error": f"Transaction {transaction_id} not found."})
 
@@ -176,15 +155,15 @@ class MoMoHandler(BaseHTTPRequestHandler):
             value = []
             for key in allowed_fields:
                 if key in body:
-                    update_field.append(f"{key} = %s")
+                    update_field.append(f"{key} = ?")
                     value.append(body[key])
             if not update_field:
                 self.send_json_response(400, {"error": "No valid fields to update. Allowed fields: external_tx_id, amount, fee, transaction_date, status, notes, balance_after."})
                 return
             value.append(transaction_id)
-            conn = connect_to_database()
+            conn = get_connection()
             cursor = conn.cursor()
-            cursor.execute(f"UPDATE transactions SET {', '.join(update_field)} WHERE transaction_id = %s", tuple(value))
+            cursor.execute(f"UPDATE transactions SET {', '.join(update_field)} WHERE id = ?", tuple(value))
             if cursor.rowcount == 0:
                 conn.commit()
                 cursor.close()
@@ -216,9 +195,9 @@ class MoMoHandler(BaseHTTPRequestHandler):
             return
 
         
-        conn = connect_to_database()
+        conn = get_connection()
         cursor = conn.cursor()
-        cursor.execute("DELETE FROM transactions WHERE transaction_id = %s", (transaction_id,))
+        cursor.execute("DELETE FROM transactions WHERE id = ?", (transaction_id,))
         if cursor.rowcount == 0:
             cursor.close()
             conn.close()
@@ -258,15 +237,7 @@ class MoMoHandler(BaseHTTPRequestHandler):
 # This is the entry point of the application. It sets up and starts the HTTP server.
 # Its for  local testing.
 if __name__ == "__main__":
-    try:
-        conn = connect_to_database()
-        if conn is None:
-            print("Failed to connect to the database. Exiting.")
-            exit(1)
-        conn.close()
-    except Exception as e:
-        print(f"Error during database connection test: {e}")
-        exit(1)
+    init_db()
     server_address = ("localhost", 8000)
 
     server = HTTPServer(server_address, MoMoHandler)
