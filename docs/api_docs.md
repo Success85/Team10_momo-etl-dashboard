@@ -141,6 +141,10 @@ curl -u admin:MOMO123 -X POST http://localhost:8000/transactions \
 
 ## Request Body
 
+**Required fields:** transaction_type, amount, sender
+
+**Optional fields:** external_tx_id, category_id, receiver, fee, balance_after, transaction_date, status, notes, raw_body
+
 ```json
 {
   "transaction_type": "MERCHANT_PAY",

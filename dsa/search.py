@@ -6,7 +6,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'api'))
  
 from db import get_connection
  
- 
+# This script demonstrates the efficiency difference between linear search and dictionary lookup
 def load_transactions():
     """Load all transactions from the database into a list."""
     conn = get_connection()
@@ -16,7 +16,7 @@ def load_transactions():
     conn.close()
     return [dict(row) for row in rows]
  
- 
+ # Build a lookup dictionary for O(1) access by transaction ID
 def build_lookup_dict(transactions):
     """
     Build a dictionary mapping transaction ID to transaction record.
@@ -24,7 +24,7 @@ def build_lookup_dict(transactions):
     """
     return {transaction["id"]: transaction for transaction in transactions}
  
- 
+ # Linear Search — O(n) time complexity
 def linear_search(transactions, target_id):
     """
     Linear Search — scan through every transaction one by one
@@ -37,7 +37,7 @@ def linear_search(transactions, target_id):
             return transaction
     return None
  
- 
+ # Dictionary Lookup — O(1) time complexity
 def dictionary_lookup(lookup_dict, target_id):
     """
     Dictionary Lookup — use the transaction ID as a key
@@ -47,7 +47,7 @@ def dictionary_lookup(lookup_dict, target_id):
     """
     return lookup_dict.get(target_id, None)
  
- 
+ # Timing functions to measure the performance of each search method
 def measure_linear_search(transactions, target_ids):
     """Run linear search for each target ID and return total time in seconds."""
     start = time.perf_counter()
@@ -56,7 +56,7 @@ def measure_linear_search(transactions, target_ids):
     end = time.perf_counter()
     return end - start
  
- 
+ # Timing function for dictionary lookup
 def measure_dictionary_lookup(lookup_dict, target_ids):
     """Run dictionary lookup for each target ID and return total time in seconds."""
     start = time.perf_counter()
@@ -65,7 +65,7 @@ def measure_dictionary_lookup(lookup_dict, target_ids):
     end = time.perf_counter()
     return end - start
  
- 
+ # Main function to run the comparison and print results
 def run_comparison():
     print("Loading transactions from database...")
     transactions = load_transactions()
@@ -99,6 +99,31 @@ def run_comparison():
         speedup = linear_time / dict_time
         print(f"  Dictionary is {speedup:.1f}x faster than Linear Search")
     print("=" * 55)
+
+    print("""
+            REFLECTION
+            ----------
+            Linear Search scans every record from the beginning until it
+            finds a match. With 1,600+ transactions, a worst-case search
+            runs through and checks almost all the over 1600 records. 
+            This gets slower as the dataset grows. The higher the number 
+            of transactions, the more time it takes to find a match.
+            Time complexity: O(n).
+            
+            Dictionary Lookup stores each transaction under its ID as a key.
+            Python dictionaries use a hash table, so looking up
+            any key takes the same amount of time regardless of how large the
+            dataset is. Time complexity: O(1).
+            
+            For a MoMo transaction system that could grow to hundreds of
+            thousands of records, dictionary lookup is significantly more
+            suitable for ID-based searches.
+            
+            An even better alternative for range queries (e.g. transactions
+            between two dates) would be a Binary Search Tree or a B-Tree
+            index — which is exactly what SQLite builds when we define an
+            index on a column, as we did in db.py.
+            """)
 
     # verify both methods return the same result
     print("VERIFICATION — both methods return identical results:")
