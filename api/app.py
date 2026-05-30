@@ -309,4 +309,9 @@ if __name__ == "__main__":
     print("    DELETE /transactions/{id} - Remove")
     print("=" * 50)
 
-    server.serve_forever()
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        pass
+    finally:
+        server.server_close()
