@@ -6,6 +6,23 @@ A fullstack data engineering project that processes MTN Mobile Money (MoMo) SMS 
 
 ---
 
+## Documentation
+
+| Document | Link |
+|---|---|
+| Database Design Document | [docs/database_design_document.pdf](docs/database_design_document.pdf) |
+| ERD Diagram | [docs/erd_diagram.png](docs/erd_diagram.png) |
+| API Documentation | [docs/api_docs.md](docs/api_docs.md) |
+| API Report (Week 3) | [docs/API_Report_Team8C3.pdf](docs/API_Report_Team8C3.pdf) |
+| SQL to JSON Mapping | [docs/sql_to_json_mapping_doc.md](docs/sql_to_json_mapping_doc.md) |
+| System Architecture | [docs/architecture.jpg](docs/architecture.jpg) |
+| AI Usage Log (Week 2) | [docs/AI_usage_log/AI_usage_log_[EWD_Database Design and Implementation_Cohort 3_Team8].pdf](docs/AI_usage_log/AI_usage_log_[EWD_Database%20Design%20and%20Implementation_Cohort%203_Team8].pdf) |
+| AI Usage Log (Week 3) | [docs/AI_usage_log/Team8Cohort3_AI Usage Log.pdf](docs/AI_usage_log/Team8Cohort3_AI%20Usage%20Log.pdf) |
+| Team Participation Sheet (Week 2) | [docs/team Participation Sheet/BSE Team Task Sheet_[EWD_Database Design and Implementation_Cohort 3_Team8].pdf](docs/team%20Participation%20Sheet/BSE%20Team%20Task%20Sheet_%5BEWD_Database%20Design%20and%20Implementation_Cohort%203_Team8%5D%20-%201.pdf) |
+| Team Participation Sheet (Week 3) | [docs/team Participation Sheet/BSE Team Task Sheet_[EWD_Building_and_Securing_a_REST_API_Cohort 3_Team8].pdf](docs/team%20Participation%20Sheet/BSE%20Team%20Task%20Sheet_%5BEWD_Building_and_Securing_a_REST%20_API_Cohort%203_Team8%5D%20.pdf) |
+
+---
+
 ## Team
 
 **Team Name:** Team8C3
@@ -67,6 +84,7 @@ Team8C3_momo-etl-dashboard/
 │   ├── db.py
 │   └── schemas.py
 ├── dsa/
+│   ├── __init__.py
 │   └── search.py
 ├── scripts/
 │   ├── run_etl.sh
@@ -79,9 +97,17 @@ Team8C3_momo-etl-dashboard/
 ├── database/
 │   └── database_setup.sql
 ├── docs/
+│   ├── AI_usage_log/
+│   │   ├── AI_usage_log_[EWD_Database Design and Implementation_Cohort 3_Team8].pdf
+│   │   └── Team8Cohort3_AI Usage Log.pdf
+│   ├── team Participation Sheet/
+│   │   ├── BSE Team Task Sheet_[EWD_Building_and_Securing_a_REST_API_Cohort 3_Team8].pdf
+│   │   └── BSE Team Task Sheet_[EWD_Database Design and Implementation_Cohort 3_Team8].pdf
 │   ├── architecture.jpg
 │   ├── erd_diagram.png
 │   ├── api_docs.md
+│   ├── API_Report_Team8C3.pdf
+│   ├── sql_to_json_mapping_doc.md
 │   └── database_design_document.pdf
 ├── screenshots/
 │   ├── 01_get_unauthorized.png
@@ -112,7 +138,12 @@ The database schema is implemented in MySQL and documented in `docs/database_des
 | `system_logs` | Audit trail for all processing events |
 
 > Full schema: `database/database_setup.sql`
-> Full documentation: `docs/database_design_document.pdf`
+> Full documentation: [docs/database_design_document.pdf](docs/database_design_document.pdf)
+> ERD Diagram: [docs/erd_diagram.png](docs/erd_diagram.png)
+
+### ERD
+
+![ERD Diagram](docs/erd_diagram.png)
 
 ---
 
@@ -130,7 +161,8 @@ A secured REST API built with Python's `http.server` that exposes the MoMo trans
 | PUT | `/transactions/{id}` | Update an existing transaction |
 | DELETE | `/transactions/{id}` | Delete a transaction |
 
-> Full API documentation: `docs/api_docs.md`
+> Full API documentation: [docs/api_docs.md](docs/api_docs.md)
+> Week 3 Report: [docs/API_Report_Team8C3.pdf](docs/API_Report_Team8C3.pdf)
 
 ### Authentication
 
