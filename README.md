@@ -17,7 +17,7 @@ A fullstack data engineering project that processes MTN Mobile Money (MoMo) SMS 
 | SQL to JSON Mapping | [docs/sql_to_json_mapping_doc.md](docs/sql_to_json_mapping_doc.md) |
 | System Architecture | [docs/architecture.jpg](docs/architecture.jpg) |
 | AI Usage Log (Week 2) | [docs/AI_usage_log/AI_usage_log_[EWD_Database Design and Implementation_Cohort 3_Team8].pdf](docs/AI_usage_log/AI_usage_log_[EWD_Database%20Design%20and%20Implementation_Cohort%203_Team8].pdf) |
-| AI Usage Log (Week 3) | [docs/AI_usage_log/AI_usage_log_[EWD_Building_and_Securing_a_REST _API_Cohort 3_Team8]](docs/AI_usage_log/AI_usage_log_[EWD_Building_and_Securing_a_REST _API_Cohort 3_Team8].pdf) |
+| AI Usage Log (Week 3) | [docs/AI_usage_log/AI_usage_log_[EWD_Building_and_Securing_a_REST _API_Cohort 3_Team8]|
 | Team Participation Sheet (Week 2) | [docs/team Participation Sheet/BSE Team Task Sheet_[EWD_Database Design and Implementation_Cohort 3_Team8].pdf](docs/team%20Participation%20Sheet/BSE%20Team%20Task%20Sheet_%5BEWD_Database%20Design%20and%20Implementation_Cohort%203_Team8%5D%20-%201.pdf) |
 | Team Participation Sheet (Week 3) | [docs/team Participation Sheet/BSE Team Task Sheet_[EWD_Building_and_Securing_a_REST_API_Cohort 3_Team8].pdf](docs/team%20Participation%20Sheet/BSE%20Team%20Task%20Sheet_%5BEWD_Building_and_Securing_a_REST%20_API_Cohort%203_Team8%5D%20.pdf) |
 
