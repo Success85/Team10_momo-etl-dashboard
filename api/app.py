@@ -213,11 +213,9 @@ class MoMoHandler(BaseHTTPRequestHandler):
         })
 
 
-#Create the HTTP server and start listening for requests
-
-
-def do_POST(self):
-        """Handle POST requests - creating new transactions."""
+    #Create the HTTP server and start listening for requests
+    def do_POST(self):
+        """Handle POST requests - creating new data."""
 
         if not check_auth(self.headers):
             self.send_json_response(401, {"error": "Unauthorized. Valid credentials required."})
@@ -225,85 +223,68 @@ def do_POST(self):
 
         try:
             body = self.read_body()
-        except Exception as e:
-            self.send_json_response(400, {"error": f"Invalid JSON body: {str(e)}"})
-            return
 
-        errors = validate_transaction(body)
-        if errors:
-            self.send_json_response(400, {"errors": errors})
-            return
+            required_fields = ["amount", "transaction_type", "sender"]
 
-        transaction_type = body["transaction_type"]
-        amount           = float(body["amount"])
-        fee              = float(body.get("fee", 0.0))
-        sender           = body["sender"]
-        receiver         = body.get("receiver", None)
-        balance_after    = float(body["balance_after"]) if body.get("balance_after") is not None else None
-        transaction_date = body.get("transaction_date", None)
-        status           = body.get("status", "completed")
-        notes            = body.get("notes", None)
-        internal_tx_id   = body.get("internal_tx_id", None)
-        external_tx_id   = body.get("external_tx_id", None)
-        raw_body         = body.get("raw_body", None)
+            for field in required_fields:
+                if field not in body or body[field] is None or str(body[field]).strip() == "":
+                    self.send_json_response(400, {"error": f"'{field}' is required and cannot be empty"})
+                    return
 
-        try:
-            conn   = get_connection()
+            amount = body["amount"]
+            try:
+                amount = float(amount)
+                if amount <= 0:
+                    self.send_json_response(400, {"error": "'amount' must be greater than zero"})
+                    return
+            except (ValueError, TypeError):
+                self.send_json_response(400, {"error": "'amount' must be a valid number"})
+                return
+
+            fee = body.get("fee", 0.0)
+            try:
+                fee = float(fee)
+                if fee < 0:
+                    self.send_json_response(400, {"error": "'fee' cannot be negative"})
+                    return
+            except (ValueError, TypeError):
+                self.send_json_response(400, {"error": "'fee' must be a valid number"})
+                return
+
+            balance_after = body.get("balance_after")
+            if balance_after is not None:
+                try:
+                    balance_after = float(balance_after)
+                    if balance_after < 0:
+                        self.send_json_response(400, {"error": "'balance_after' cannot be negative"})
+                        return
+                except (ValueError, TypeError):
+                    self.send_json_response(400, {"error": "'balance_after' must be a valid number"})
+                    return
+
+            transaction_type = body["transaction_type"]
+            sender = body["sender"]
+            receiver = body.get("receiver")
+            transaction_date = body.get("transaction_date")
+            status = body.get("status", "completed")
+            notes = body.get("notes")
+
+            conn = get_connection()
             cursor = conn.cursor()
-
-            # look up category_id from transaction_type code
-            cursor.execute(
-                "SELECT category_id FROM transaction_categories WHERE category_code = ?",
-                (transaction_type,)
-            )
-            category_row = cursor.fetchone()
-            category_id  = category_row["category_id"] if category_row else None
-
             cursor.execute("""
-                INSERT INTO transactions (
-                    transaction_type, internal_tx_id, external_tx_id,
-                    category_id, sender, receiver, amount, fee,
-                    balance_after, transaction_date, status, notes, raw_body
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (
-                transaction_type, internal_tx_id, external_tx_id,
-                category_id, sender, receiver, amount, fee,
-                balance_after, transaction_date, status, notes, raw_body
-            ))
-
+                INSERT INTO transactions (transaction_type, sender, receiver, amount, fee, balance_after, transaction_date, status, notes)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (transaction_type, sender, receiver, amount, fee, balance_after, transaction_date, status, notes))
+            new_id = cursor.lastrowid   
             conn.commit()
-            new_id = cursor.lastrowid
+            cursor.close()  
             conn.close()
-
             self.send_json_response(201, {
                 "message": "Transaction created successfully.",
-                "transaction": {
-                    "id":               new_id,
-                    "transaction_type": transaction_type,
-                    "internal_tx_id":   internal_tx_id,
-                    "external_tx_id":   external_tx_id,
-                    "category_id":      category_id,
-                    "sender":           sender,
-                    "receiver":         receiver,
-                    "amount":           amount,
-                    "fee":              fee,
-                    "balance_after":    balance_after,
-                    "transaction_date": transaction_date,
-                    "status":           status,
-                    "notes":            notes
-                }
+                "transaction_id": new_id
             })
-
         except Exception as e:
-            self.send_json_response(500, {"error": f"Database error: {str(e)}"})
-
-
-
-
-
-
-
-
+            self.send_json_response(400, {"error": f"Bad request: {str(e)}"})
 
 
 # TODO: We will have to change the host and port later to make it accessible over the network. For now, it's just for local testing.
