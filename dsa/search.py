@@ -1,5 +1,6 @@
 import sys
 import os
+import time
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'api'))
 
 from db import get_connection
@@ -44,3 +45,25 @@ def dictionary_lookup(lookup_dict, target_id):
     Time complexity: O(1) — direct key access, no scanning.
     """
     return lookup_dict.get(target_id, None)
+
+
+def measure_linear_search(transactions, target_ids):
+    """Run linear search for each target ID and return total time in seconds."""
+    start = time.perf_counter()
+    for target_id in target_ids:
+        linear_search(transactions, target_id)
+    end = time.perf_counter()
+    return end - start
+
+
+def measure_dictionary_lookup(lookup_dict, target_ids):
+    """Run dictionary lookup for each target ID and return total time in seconds."""
+    start = time.perf_counter()
+    for target_id in target_ids:
+        dictionary_lookup(lookup_dict, target_id)
+    end = time.perf_counter()
+    return end - start
+
+
+if __name__ == "__main__":
+    run_comparison()
